@@ -150,11 +150,6 @@ export default function ActiveRequestsScreen() {
               mode="contained"
               onPress={() => {/* TODO: Implement call */}}
             />
-            <IconButton
-              icon="chat"
-              mode="contained"
-              onPress={() => setIsChatOpen(true)}
-            />
           </View>
         </Card.Content>
       </Card>
@@ -243,16 +238,6 @@ export default function ActiveRequestsScreen() {
         </Card>
 
         {renderProviderCard()}
-        {renderChat()}
-
-        <Button
-          mode="contained"
-          icon="phone"
-          onPress={() => {/* TODO: Implement emergency call */}}
-          style={styles.emergencyButton}
-        >
-          Emergency Call
-        </Button>
       </View>
     </View>
   );
