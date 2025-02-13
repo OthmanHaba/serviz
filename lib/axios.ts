@@ -1,7 +1,22 @@
 import axios from 'axios';
+import { getItem } from './asyncStorage';
 
 const api = axios.create({
-  baseURL: 'https://38b5-208-115-193-34.ngrok-free.app/api',
+  baseURL: 'http://serviz-backend.test/api',
 });
+
+api.interceptors.request.use(
+  async (config) => {
+    const token = await getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 
 export default api;

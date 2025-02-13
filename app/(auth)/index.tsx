@@ -48,7 +48,7 @@ export default function Onboarding() {
 
   const onRoleSelect = (role: 'user' | 'provider') => {
     // TODO: Store role selection
-    router.replace('/register');
+    router.replace(`/register?role=${role}`);
   };
 
   return (
@@ -88,6 +88,13 @@ export default function Onboarding() {
                   style={styles.roleButton}
                 >
                   I'm a Service Provider
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={() => router.replace('/login')}
+                  style={{...styles.roleButton, marginTop: 30, backgroundColor: '#4A10E2'}}
+                >
+                    Login
                 </Button>
               </View>
             )}

@@ -1,4 +1,4 @@
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import { Text, Card, Chip, Searchbar, Menu, Button, IconButton, useTheme } from 'react-native-paper';
 import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -162,7 +162,7 @@ export default function HistoryScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Searchbar
           placeholder="Search history"
@@ -284,7 +284,7 @@ export default function HistoryScreen() {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

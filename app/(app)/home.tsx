@@ -6,36 +6,14 @@ import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useServiceStore from '@/stores/serviceStore';
-
-// const services = [
-//   {
-//     id: 'towing',
-//     title: 'Towing Service',
-//     icon: 'tow-truck',
-//     description: 'Get your vehicle towed to the nearest repair shop',
-//   },
-//   {
-//     id: 'gas',
-//     title: 'Gas Delivery',
-//     icon: 'gas-station',
-//     description: "Running low on fuel? We'll bring gas to you",
-//   },
-//   {
-//     id: 'mechanic',
-//     title: 'Mobile Mechanic',
-//     icon: 'wrench',
-//     description: 'Professional mechanic will come to your location',
-//   },
-// ];
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function HomeScreen() {
   const theme = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const { services, fetchServices } = useServiceStore();
-  console.log(services);
+  const { services, fetchServices, setSelectedService } = useServiceStore();
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -50,11 +28,12 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  const onServiceSelect = (serviceId: string) => {
+  const onServiceSelect = (service : any) => {
+    setSelectedService(service);
     router.push({
       pathname: '/request-service',
       params: { 
-        serviceId,
+        service,
         latitude: location?.coords.latitude,
         longitude: location?.coords.longitude,
       },
@@ -62,7 +41,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {location ? (
         <MapView
           style={styles.map}
@@ -97,18 +76,13 @@ export default function HomeScreen() {
           <Card
             key={service.id}
             style={styles.serviceCard}
-            onPress={() => onServiceSelect(service.id)}
+            onPress={() => onServiceSelect(service)}
           >
             <Card.Content style={styles.serviceCardContent}>
               <Image
                 source={{ uri: service.image }}
                 style={{ width: 40, height: 40 }}
               />
-              {/* <MaterialCommunityIcons
-                name={service.image as any}
-                size={40}
-                color={theme.colors.primary}
-              /> */}
               <Text variant="titleMedium" style={styles.serviceTitle}>
                 {service.title}
               </Text>
@@ -117,11 +91,18 @@ export default function HomeScreen() {
               </Text>
             </Card.Content>
           </Card>
-        )) : <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>}
+        )) : (
+          <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>
+            <Card style={[styles.serviceCard, {backgroundColor: '#f5f5f5'}]}>
+              <Card.Content style={styles.serviceCardContent}>
+                <View style={{width: 40, height: 40, backgroundColor: '#e0e0e0', borderRadius: 20}} />
+                <View style={{width: '80%', height: 20, backgroundColor: '#e0e0e0', marginTop: 8, borderRadius: 4}} />
+              </Card.Content>
+            </Card>
+          </View>
+        )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -46,9 +46,6 @@ export default function ActiveRequestsScreen() {
     createdAt: new Date().toISOString(),
     estimatedArrival: '10 minutes',
   });
-
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [messages, setMessages] = useState<Array<{ text: string; sender: 'user' | 'provider' }>>([]);
   const [socket, setSocket] = useState<any>(null);
 
   useEffect(() => {
@@ -73,10 +70,6 @@ export default function ActiveRequestsScreen() {
         ...prev,
         status: data.status,
       }));
-    });
-
-    newSocket.on('chat_message', (message: { text: string; sender: 'provider' }) => {
-      setMessages(prev => [...prev, message]);
     });
 
     return () => {
@@ -155,35 +148,6 @@ export default function ActiveRequestsScreen() {
       </Card>
     );
   };
-
-  const renderChat = () => (
-    <Portal>
-      <Modal
-        visible={isChatOpen}
-        onDismiss={() => setIsChatOpen(false)}
-        contentContainerStyle={styles.chatModal}
-      >
-        <View style={styles.chatHeader}>
-          <Text variant="titleLarge">Chat with Provider</Text>
-          <IconButton icon="close" onPress={() => setIsChatOpen(false)} />
-        </View>
-        <View style={styles.chatMessages}>
-          {messages.map((message, index) => (
-            <View
-              key={index}
-              style={[
-                styles.message,
-                message.sender === 'user' ? styles.userMessage : styles.providerMessage,
-              ]}
-            >
-              <Text style={styles.messageText}>{message.text}</Text>
-            </View>
-          ))}
-        </View>
-        {/* TODO: Add message input */}
-      </Modal>
-    </Portal>
-  );
 
   if (!activeRequest) {
     return (

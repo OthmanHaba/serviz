@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import {
   Text,
   Avatar,
@@ -119,9 +119,10 @@ export default function ProfileScreen() {
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Avatar.Text
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Avatar.Text
           size={80}
           label="JD"
           style={styles.avatar}
@@ -224,6 +225,7 @@ export default function ProfileScreen() {
         <Text variant="bodySmall" style={styles.version}>Version 1.0.0</Text>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

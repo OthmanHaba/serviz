@@ -1,123 +1,47 @@
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, SafeAreaView, Image } from 'react-native';
 import { Text, Button, TextInput, ProgressBar, useTheme, Card } from 'react-native-paper';
 import { useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-type ServiceDetails = {
-  vehicleType?: string;
-  fuelType?: string;
-  quantity?: string;
-  issueDescription?: string;
-};
+import useServiceStore from '@/stores/serviceStore';
 
 export default function RequestServiceScreen() {
   const theme = useTheme();
+  const { selectedService } = useServiceStore();
   const params = useLocalSearchParams<{
-    serviceId: string;
     latitude: string;
     longitude: string;
   }>();
 
   const [step, setStep] = useState(1);
-  const [details, setDetails] = useState<ServiceDetails>({});
-  const totalSteps = 4;
+  const totalSteps = 3;
 
-  const getServiceIcon = () => {
-    switch (params.serviceId) {
-      case 'towing':
-        return 'tow-truck';
-      case 'gas':
-        return 'gas-station';
-      case 'mechanic':
-        return 'wrench';
-      default:
-        return 'help';
-    }
-  };
-
-  const getServiceTitle = () => {
-    switch (params.serviceId) {
-      case 'towing':
-        return 'Towing Service';
-      case 'gas':
-        return 'Gas Delivery';
-      case 'mechanic':
-        return 'Mobile Mechanic';
-      default:
-        return 'Service';
-    }
-  };
-
-  const renderServiceDetails = () => {
-    switch (params.serviceId) {
-      case 'towing':
-        return (
-          <TextInput
-            label="Vehicle Type"
-            value={details.vehicleType}
-            onChangeText={(text) => setDetails({ ...details, vehicleType: text })}
-            style={styles.input}
-          />
-        );
-      case 'gas':
-        return (
-          <>
-            <TextInput
-              label="Fuel Type"
-              value={details.fuelType}
-              onChangeText={(text) => setDetails({ ...details, fuelType: text })}
-              style={styles.input}
-            />
-            <TextInput
-              label="Quantity (Liters)"
-              value={details.quantity}
-              onChangeText={(text) => setDetails({ ...details, quantity: text })}
-              keyboardType="numeric"
-              style={styles.input}
-            />
-          </>
-        );
-      case 'mechanic':
-        return (
-          <TextInput
-            label="Issue Description"
-            value={details.issueDescription}
-            onChangeText={(text) => setDetails({ ...details, issueDescription: text })}
-            multiline
-            numberOfLines={4}
-            style={styles.input}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+  const [price, setPrice] = useState(0);
 
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
-          <View style={styles.stepContainer}>
+          <SafeAreaView  style={styles.stepContainer}>
             <Text variant="titleLarge" style={styles.stepTitle}>Confirm Service Type</Text>
             <Card style={styles.serviceCard}>
               <Card.Content style={styles.serviceCardContent}>
-                <MaterialCommunityIcons
-                  name={getServiceIcon()}
-                  size={48}
-                  color={theme.colors.primary}
+                <Image
+                  source={{ uri: selectedService?.image }}
+                  style={{ width: 48, height: 48 }}
+                  resizeMode="contain"
                 />
                 <Text variant="headlineSmall" style={styles.serviceTitle}>
-                  {getServiceTitle()}
+                  {selectedService?.name}
                 </Text>
               </Card.Content>
             </Card>
-          </View>
+          </SafeAreaView>
         );
       case 2:
         return (
-          <View style={styles.stepContainer}>
+          <SafeAreaView style={styles.stepContainer}>
             <Text variant="titleLarge" style={styles.stepTitle}>Confirm Location</Text>
             <MapView
               style={styles.map}
@@ -136,38 +60,35 @@ export default function RequestServiceScreen() {
                 draggable
               />
             </MapView>
-          </View>
+          </SafeAreaView>
         );
       case 3:
         return (
-          <View style={styles.stepContainer}>
-            <Text variant="titleLarge" style={styles.stepTitle}>Service Details</Text>
-            {renderServiceDetails()}
-          </View>
-        );
-      case 4:
-        return (
-          <View style={styles.stepContainer}>
+          <SafeAreaView style={styles.stepContainer}>
             <Text variant="titleLarge" style={styles.stepTitle}>Confirmation</Text>
             <Card style={styles.summaryCard}>
               <Card.Content>
                 <Text variant="titleMedium">Service Type:</Text>
-                <Text style={styles.summaryText}>{getServiceTitle()}</Text>
+                <Text style={styles.summaryText}>{selectedService?.name}</Text>
                 
                 <Text variant="titleMedium" style={styles.summaryLabel}>Location:</Text>
                 <Text style={styles.summaryText}>Current Location</Text>
                 
                 <Text variant="titleMedium" style={styles.summaryLabel}>Estimated Price:</Text>
-                <Text style={styles.summaryText}>$50 - $100</Text>
+                <Text style={styles.summaryText}>{price}</Text>
               </Card.Content>
             </Card>
-          </View>
+          </SafeAreaView>
         );
       default:
         return null;
     }
   };
 
+  const getEstimatedPrice = () => {
+    setPrice(200);
+    setStep(step + 1);
+  };
   const onSubmit = async () => {
     try {
       // TODO: Implement API call to create service request
@@ -178,7 +99,7 @@ export default function RequestServiceScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ProgressBar
         progress={step / totalSteps}
         color={theme.colors.primary}
@@ -203,7 +124,7 @@ export default function RequestServiceScreen() {
         {step < totalSteps ? (
           <Button
             mode="contained"
-            onPress={() => setStep(step + 1)}
+            onPress={step === 2 ?   getEstimatedPrice : ()=>setStep(step+1)}
             style={[styles.button, step === 1 && styles.singleButton]}
           >
             Next
@@ -218,7 +139,7 @@ export default function RequestServiceScreen() {
           </Button>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

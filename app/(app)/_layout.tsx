@@ -1,15 +1,20 @@
 import { Tabs } from 'expo-router';
 import { Text, useTheme } from 'react-native-paper';
 import { AntDesign } from '@expo/vector-icons';
-import { useState } from 'react';
-
-// TODO: Replace with actual role check from auth state
-// const userRole = 'user'; // or 'user'
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function AppLayout() {
   const theme = useTheme();
 
-  const [userRole, setUserRole] = useState('user');
+  const [userRole, setUserRole] = useState<'user' | 'provider'>('user');
+
+  useEffect(() => {
+    const { user } = useAuthStore.getState();
+    if (user) {
+      setUserRole(user.role);
+    }
+  }, []);
 
   return (
     <Tabs
