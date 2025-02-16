@@ -3,8 +3,10 @@ import { Text, Button, TextInput, ProgressBar, useTheme, Card } from 'react-nati
 import { useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useServiceStore from '@/stores/serviceStore';
+import { LockUpRequest } from '@/types';
+import { lockup } from "@/lib/api/service"
+
 
 export default function RequestServiceScreen() {
   const theme = useTheme();
@@ -13,6 +15,8 @@ export default function RequestServiceScreen() {
     latitude: string;
     longitude: string;
   }>();
+
+  const [loadingLockup, setLoadingLockup] = useState<boolean>(false)
 
   const [step, setStep] = useState(1);
   const totalSteps = 3;
@@ -23,7 +27,7 @@ export default function RequestServiceScreen() {
     switch (step) {
       case 1:
         return (
-          <SafeAreaView  style={styles.stepContainer}>
+          <SafeAreaView style={styles.stepContainer}>
             <Text variant="titleLarge" style={styles.stepTitle}>Confirm Service Type</Text>
             <Card style={styles.serviceCard}>
               <Card.Content style={styles.serviceCardContent}>
@@ -70,10 +74,10 @@ export default function RequestServiceScreen() {
               <Card.Content>
                 <Text variant="titleMedium">Service Type:</Text>
                 <Text style={styles.summaryText}>{selectedService?.name}</Text>
-                
+
                 <Text variant="titleMedium" style={styles.summaryLabel}>Location:</Text>
                 <Text style={styles.summaryText}>Current Location</Text>
-                
+
                 <Text variant="titleMedium" style={styles.summaryLabel}>Estimated Price:</Text>
                 <Text style={styles.summaryText}>{price}</Text>
               </Card.Content>
@@ -85,9 +89,26 @@ export default function RequestServiceScreen() {
     }
   };
 
-  const getEstimatedPrice = () => {
-    setPrice(200);
-    setStep(step + 1);
+  const getEstimatedPrice = async () => {
+
+    if (!selectedService) {
+      return;
+    }
+    try {
+      const res = await lockup({
+        service_id: selectedService.id,
+        coordinate: {
+          longitude: params.latitude,
+          latitude: params.latitude,
+        }
+      });
+
+    } catch (e) {
+      console.error(e);
+    }
+
+    // setPrice(200);
+    // setStep(step + 1);
   };
   const onSubmit = async () => {
     try {
@@ -105,7 +126,7 @@ export default function RequestServiceScreen() {
         color={theme.colors.primary}
         style={styles.progressBar}
       />
-      
+
       <ScrollView contentContainerStyle={styles.content}>
         {renderStep()}
       </ScrollView>
@@ -120,11 +141,11 @@ export default function RequestServiceScreen() {
             Back
           </Button>
         )}
-        
+
         {step < totalSteps ? (
           <Button
             mode="contained"
-            onPress={step === 2 ?   getEstimatedPrice : ()=>setStep(step+1)}
+            onPress={step === 2 ? getEstimatedPrice : () => setStep(step + 1)}
             style={[styles.button, step === 1 && styles.singleButton]}
           >
             Next

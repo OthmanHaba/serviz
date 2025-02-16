@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { toggleActiveStatus } from '@/lib/api/provider';
+import { toggleActiveStatus, updateLocation } from '@/lib/api/provider';
+import { useAuthStore } from '@/stores/authStore';
+
 type DailyStats = {
   totalEarnings: number;
   completedRequests: number;
@@ -20,6 +22,9 @@ export default function DashboardScreen() {
   const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
   const [expanded, setExpanded] = useState(false);
   const animatedHeight = useState(new Animated.Value(0))[0];
+  const { user } = useAuthStore();
+
+
 
   const [todayStats] = useState<DailyStats>({
     totalEarnings: 185.50,
@@ -30,6 +35,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
+    let locationUpdateInterval: NodeJS.Timeout | null = null;
 
     (async () => {
       try {
@@ -39,11 +45,23 @@ export default function DashboardScreen() {
           return;
         }
 
+        if(user){
+          setIsOnline(user.is_active);
+        }
+
         // Get initial location
         let initialLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,
         });
         setLocation(initialLocation);
+
+        // Update server with initial location
+        if (isOnline) {
+          await updateLocation(
+            initialLocation.coords.latitude,
+            initialLocation.coords.longitude
+          );
+        }
 
         // Start watching position
         subscription = await Location.watchPositionAsync(
@@ -57,6 +75,20 @@ export default function DashboardScreen() {
           }
         );
 
+        // Set up interval to update server with location
+        locationUpdateInterval = setInterval(async () => {
+          if (isOnline && location) {
+            try {
+              await updateLocation(
+                location.coords.latitude,
+                location.coords.longitude
+              );
+            } catch (error) {
+              console.error('Error updating location:', error);
+            }
+          }
+        }, 30000); // Update server every 30 seconds
+
         setLocationSubscription(subscription);
       } catch (error) {
         setErrorMsg('Error accessing location services');
@@ -64,13 +96,16 @@ export default function DashboardScreen() {
       }
     })();
 
-    // Cleanup subscription on unmount
+    // Cleanup subscription and interval on unmount
     return () => {
       if (subscription) {
         subscription.remove();
       }
+      if (locationUpdateInterval) {
+        clearInterval(locationUpdateInterval);
+      }
     };
-  }, []);
+  }, [isOnline]);
 
   const toggleOnlineStatus = async () => {
     try {

@@ -19,6 +19,10 @@ export default function Login() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { setUser, setToken } = useAuthStore();
+  const [error , setError]= useState<{
+    message:string,
+  } | null>(null);
+
 
   const onSubmit = async (data: LoginForm) => {
     try {
@@ -35,10 +39,16 @@ export default function Login() {
           router.push('/(app)/home');
         }
       } else {
+        console.log(response.data.message)
         Alert.alert('Error', response.data.message);
       }
-    } catch (error) {
-      console.error(error);
+    } catch (_error) {
+      if(_error.status == 401){
+        setError({
+          "message" : "Invalid credentials"
+        });
+      }
+      console.log(error);
     } finally {
       setIsLoading(false);
     }
@@ -81,8 +91,16 @@ export default function Login() {
         )}
       />
 
+      {error && (
+        <View>
+          <Text style={{color: 'red'}}>{error.message}</Text>
+        </View>
+
+      )}
+
       <Button
         mode="contained"
+        // disabled={value}
         onPress={handleSubmit(onSubmit)}
         style={styles.button}
       >

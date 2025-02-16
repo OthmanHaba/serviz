@@ -6,3 +6,12 @@ export const toggleActiveStatus = async (isActive: boolean) => {
   });
   return response.data;
 };
+
+export const updateLocation = async (latitude: number, longitude: number) => {
+  const response = await axios.post('/provider/update-location', {
+    lat: latitude,
+    long: longitude,
+  });
+  console.log(response.data);
+  return response.data;
+};
