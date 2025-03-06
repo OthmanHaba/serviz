@@ -7,7 +7,21 @@ const getServices = async () => {
 };
 
 const lockup = async (data: LockUpRequest) => {
-  return await api.post("/service/lockup-service");
+  return await api.post("/service/lockup-service",data);
 };
 
-export { getServices,lockup };
+const userApproveActiveRequest = async (id: number) => {
+  return await api.post('/service/user/conform-service',{
+    'active_request_id' : id
+  });
+}
+
+const getActiveRequestData = async (id :number) => {
+  return await api.get(`/service/track/get-status?active_request_id=${id}`)
+}
+
+const acceptOrDeclineRequset = async (id: number) => {
+  
+}
+
+export { getServices,lockup,userApproveActiveRequest,getActiveRequestData ,acceptOrDeclineRequset};

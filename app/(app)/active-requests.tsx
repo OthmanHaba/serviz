@@ -1,19 +1,19 @@
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text, Card, Button, Avatar, IconButton, Portal, Modal } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { io } from 'socket.io-client';
-
-// TODO: Replace with actual API endpoint
-const SOCKET_URL = 'http://localhost:3000';
+import {getActiveRequestData} from "@/lib/api/service"
+import { useLocalSearchParams } from 'expo-router';
+import { number } from 'zod';
 
 type Provider = {
   id: string;
   name: string;
   rating: number;
   phone: string;
-  location: {
+  current_location: {
     latitude: number;
     longitude: number;
   };
@@ -29,7 +29,7 @@ type ServiceRequest = {
 };
 
 export default function ActiveRequestsScreen() {
-  const [activeRequest, setActiveRequest] = useState<ServiceRequest>({
+  const [activeRequest, setActiveRequest] = useState({
     id: '123',
     status: 'accepted',
     serviceType: 'towing',
@@ -38,7 +38,7 @@ export default function ActiveRequestsScreen() {
       name: 'John Smith',
       rating: 4.8,
       phone: '+1234567890',
-      location: {
+      current_location: {
         latitude: 37.7749,
         longitude: -122.4194,
       },
@@ -46,50 +46,30 @@ export default function ActiveRequestsScreen() {
     createdAt: new Date().toISOString(),
     estimatedArrival: '10 minutes',
   });
-  const [socket, setSocket] = useState<any>(null);
+
+  const params = useLocalSearchParams();
 
   useEffect(() => {
-    // Initialize socket connection
-    const newSocket = io(SOCKET_URL);
-    setSocket(newSocket);
-
-    newSocket.on('provider_location', (data: { latitude: number; longitude: number }) => {
-      if (activeRequest?.provider) {
-        setActiveRequest(prev => ({
-          ...prev,
-          provider: {
-            ...prev.provider!,
-            location: data,
-          },
-        }));
-      }
-    });
-
-    newSocket.on('request_status', (data: { status: ServiceRequest['status'] }) => {
-      setActiveRequest(prev => ({
-        ...prev,
-        status: data.status,
-      }));
-    });
+    const statusUpdateInterval = setInterval(async () => {
+      const res = await getActiveRequestData(Number(params.id));
+      console.log(res.data);
+      setActiveRequest(res.data);
+    }, 10000);
 
     return () => {
-      newSocket.disconnect();
+      clearInterval(statusUpdateInterval);
     };
-  }, []);
+  }, [params.id]);
 
   const getStatusColor = () => {
     switch (activeRequest.status) {
-      case 'pending':
+      case 'PendingUserApproved':
         return '#FCD34D';
-      case 'accepted':
-        return '#60A5FA';
-      case 'en_route':
-        return '#34D399';
-      case 'arrived':
-        return '#818CF8';
-      case 'in_progress':
+      case 'PendingProviderApproved':
+        return '#60A5FA'; 
+      case 'InProgress':
         return '#F472B6';
-      case 'completed':
+      case 'Completed':
         return '#10B981';
       default:
         return '#6B7280';
@@ -98,17 +78,13 @@ export default function ActiveRequestsScreen() {
 
   const getStatusText = () => {
     switch (activeRequest.status) {
-      case 'pending':
-        return 'Finding a service provider...';
-      case 'accepted':
-        return 'Provider has accepted your request';
-      case 'en_route':
-        return 'Provider is on the way';
-      case 'arrived':
-        return 'Provider has arrived';
-      case 'in_progress':
+      case 'PendingUserApproved':
+        return 'Waiting for your approval...';
+      case 'PendingProviderApproved':
+        return 'Wating provider approval...';
+      case 'InProgress':
         return 'Service in progress';
-      case 'completed':
+      case 'Completed':
         return 'Service completed';
       default:
         return 'Unknown status';
@@ -161,18 +137,18 @@ export default function ActiveRequestsScreen() {
   return (
     <View style={styles.container}>
       <MapView
-        provider={PROVIDER_GOOGLE}
+        provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={{
-          latitude: activeRequest.provider?.location.latitude || 37.7749,
-          longitude: activeRequest.provider?.location.longitude || -122.4194,
+          latitude: activeRequest.provider?.current_location.latitude || 37.7749,
+          longitude: activeRequest.provider?.current_location.longitude || -122.4194,
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
         }}
       >
         {activeRequest.provider && (
           <Marker
-            coordinate={activeRequest.provider.location}
+            coordinate={activeRequest.provider.current_location}
             title={activeRequest.provider.name}
           >
             <MaterialCommunityIcons

@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 interface Service {
   id: number;
-  name: string;
+  title: string;
   image: string;
   description: string;
 }

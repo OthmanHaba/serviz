@@ -1,133 +1,117 @@
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList, Image } from 'react-native';
 import { Text, Card, Button, Chip, useTheme, Portal, Modal } from 'react-native-paper';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { getActiveRequests } from '@/lib/api/provider';
 type ServiceRequest = {
-  id: string;
-  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
-  serviceType: string;
-  distance: number;
-  estimatedEarnings: number;
-  location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  };
-  customer: {
+  id: number;
+  status: 'PendingProviderApproved';
+  price: string;
+  user: {
+    id: number;
     name: string;
-    rating: number;
+    email: string;
+    phone: string;
+    current_location: null | {
+      latitude: number;
+      longitude: number;
+    };
   };
-  description?: string;
+  service: {
+    name:string;
+    image:string;
+  }
 };
-
-const mockRequests: ServiceRequest[] = [
-  {
-    id: '1',
-    status: 'pending',
-    serviceType: 'towing',
-    distance: 2.5,
-    estimatedEarnings: 85.00,
-    location: {
-      latitude: 37.7849,
-      longitude: -122.4194,
-      address: '123 Main St, San Francisco, CA',
-    },
-    customer: {
-      name: 'John Doe',
-      rating: 4.8,
-    },
-    description: 'Vehicle needs to be towed to nearest repair shop',
-  },
-  {
-    id: '2',
-    status: 'pending',
-    serviceType: 'gas',
-    distance: 1.8,
-    estimatedEarnings: 45.00,
-    location: {
-      latitude: 37.7899,
-      longitude: -122.4174,
-      address: '456 Market St, San Francisco, CA',
-    },
-    customer: {
-      name: 'Jane Smith',
-      rating: 4.9,
-    },
-    description: 'Out of gas, need 5 gallons of regular unleaded',
-  },
-];
 
 export default function RequestsScreen() {
   const theme = useTheme();
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [detailsVisible, setDetailsVisible] = useState(false);
+  const [requests, setRequests] = useState<ServiceRequest[] | null>(null)
 
-  const getServiceIcon = (type: string) => {
-    switch (type) {
-      case 'towing':
-        return 'tow-truck';
-      case 'gas':
-        return 'gas-station';
-      case 'mechanic':
-        return 'wrench';
-      default:
-        return 'help';
-    }
-  };
+  useEffect(() => {
+    (async () => {
+      const res = await getActiveRequests();
 
-  const formatDistance = (distance: number) => {
-    return `${distance.toFixed(1)} mi`;
-  };
+      setRequests(res.data);
+    })()
 
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
+  }, [])
+  
+
+  const getServiceIcon = () => {
+    return 'car-wrench';
   };
 
   const handleAcceptRequest = (request: ServiceRequest) => {
-    // TODO: Implement accept request logic
+
     console.log('Accepting request:', request.id);
   };
+
+  const handleDeclineRequest = (request : ServiceRequest) => {
+
+  }
 
   const renderRequestCard = ({ item }: { item: ServiceRequest }) => (
     <Card style={styles.requestCard}>
       <Card.Content>
         <View style={styles.cardHeader}>
           <View style={styles.serviceInfo}>
-            <MaterialCommunityIcons
-              name={getServiceIcon(item.serviceType)}
-              size={24}
-              color={theme.colors.primary}
-            />
+              <Image
+                style={{width:25, height: 25}}
+                src={item.service.image}
+                resizeMode='contain'
+              />
             <Text variant="titleMedium" style={styles.serviceType}>
-              {item.serviceType.charAt(0).toUpperCase() + item.serviceType.slice(1)}
+              service type: {item.service.name}
+            </Text>
+
+            
+          </View>
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#DCFCE7',
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 8,
+            gap: 4
+          }}>
+            <MaterialCommunityIcons 
+              size={20}
+              name='cash'
+              color='#16A34A'
+            />
+            <Text variant="titleMedium" style={{
+              color: '#16A34A',
+              fontWeight: '600',
+            }}>
+              ${item.price}
             </Text>
           </View>
-          <Chip icon="cash">{formatCurrency(item.estimatedEarnings)}</Chip>
         </View>
 
-        <View style={styles.locationInfo}>
-          <MaterialCommunityIcons
-            name="map-marker"
-            size={16}
-            color="#6B7280"
-          />
-          <Text variant="bodyMedium" style={styles.address} numberOfLines={1}>
-            {item.location.address}
-          </Text>
-          <Text variant="bodyMedium" style={styles.distance}>
-            {formatDistance(item.distance)}
-          </Text>
-        </View>
+        {item.user.current_location && (
+          <View style={styles.locationInfo}>
+            <MaterialCommunityIcons
+              name="map-marker"
+              size={16}
+              color="#6B7280"
+            />
+            <Text variant="bodyMedium" style={styles.address} numberOfLines={1}>
+              {`${item.user.current_location.latitude}, ${item.user.current_location.longitude}`}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.customerInfo}>
           <View style={styles.customerDetails}>
-            <Text variant="bodyMedium">{item.customer.name}</Text>
-            <View style={styles.rating}>
-              <MaterialCommunityIcons name="star" size={16} color="#FCD34D" />
-              <Text variant="bodySmall">{item.customer.rating}</Text>
-            </View>
+            <Text variant="bodyMedium">{item.user.name}</Text>
+            <Text variant="bodySmall" style={styles.customerContact}>
+              {item.user.phone}
+            </Text>
           </View>
         </View>
 
@@ -141,12 +125,10 @@ export default function RequestsScreen() {
           </Button>
           <Button
             mode="outlined"
-            onPress={() => {
-              setSelectedRequest(item);
-              setDetailsVisible(true);
-            }}
+            style={{borderColor: 'red'}}
+            onPress={() => handleDeclineRequest(item)}
           >
-            View Details
+            Cancel
           </Button>
         </View>
       </Card.Content>
@@ -165,50 +147,47 @@ export default function RequestsScreen() {
             <View style={styles.modalHeader}>
               <Text variant="headlineSmall">Request Details</Text>
               <MaterialCommunityIcons
-                name={getServiceIcon(selectedRequest.serviceType)}
+                name={getServiceIcon()}
                 size={24}
                 color={theme.colors.primary}
               />
             </View>
 
-            <MapView
-              provider={PROVIDER_GOOGLE}
-              style={styles.map}
-              initialRegion={{
-                latitude: selectedRequest.location.latitude,
-                longitude: selectedRequest.location.longitude,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              }}
-            >
-              <Marker
-                coordinate={{
-                  latitude: selectedRequest.location.latitude,
-                  longitude: selectedRequest.location.longitude,
+            {selectedRequest.user.current_location && (
+              <MapView
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                initialRegion={{
+                  latitude: selectedRequest.user.current_location.latitude,
+                  longitude: selectedRequest.user.current_location.longitude,
+                  latitudeDelta: 0.0922,
+                  longitudeDelta: 0.0421,
                 }}
-              />
-            </MapView>
+              >
+                <Marker
+                  coordinate={{
+                    latitude: selectedRequest.user.current_location.latitude,
+                    longitude: selectedRequest.user.current_location.longitude,
+                  }}
+                />
+              </MapView>
+            )}
 
             <View style={styles.detailsContent}>
-              <Text variant="titleMedium">Service Type</Text>
+              <Text variant="titleMedium">Customer Information</Text>
               <Text variant="bodyLarge" style={styles.detailText}>
-                {selectedRequest.serviceType.charAt(0).toUpperCase() + 
-                 selectedRequest.serviceType.slice(1)}
+                {selectedRequest.user.name}
+              </Text>
+              <Text variant="bodyMedium" style={styles.detailText}>
+                {selectedRequest.user.phone}
+              </Text>
+              <Text variant="bodyMedium" style={styles.detailText}>
+                {selectedRequest.user.email}
               </Text>
 
-              <Text variant="titleMedium" style={styles.detailLabel}>Location</Text>
+              <Text variant="titleMedium" style={styles.detailLabel}>Status</Text>
               <Text variant="bodyLarge" style={styles.detailText}>
-                {selectedRequest.location.address}
-              </Text>
-
-              <Text variant="titleMedium" style={styles.detailLabel}>Description</Text>
-              <Text variant="bodyLarge" style={styles.detailText}>
-                {selectedRequest.description || 'No description provided'}
-              </Text>
-
-              <Text variant="titleMedium" style={styles.detailLabel}>Estimated Earnings</Text>
-              <Text variant="headlineSmall" style={styles.earnings}>
-                {formatCurrency(selectedRequest.estimatedEarnings)}
+                {selectedRequest.status}
               </Text>
 
               <Button
@@ -229,11 +208,11 @@ export default function RequestsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
-        data={mockRequests}
+        data={requests}
         renderItem={renderRequestCard}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -249,7 +228,7 @@ export default function RequestsScreen() {
         }
       />
       {renderRequestDetails()}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -287,10 +266,6 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     color: '#6B7280',
   },
-  distance: {
-    marginLeft: 8,
-    color: '#6B7280',
-  },
   customerInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -298,13 +273,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   customerDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
   },
-  rating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
+  customerContact: {
+    color: '#6B7280',
+    marginTop: 4,
   },
   actions: {
     flexDirection: 'row',
@@ -351,10 +324,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: '#6B7280',
   },
-  earnings: {
-    marginTop: 4,
-  },
   modalAcceptButton: {
     marginTop: 24,
   },
-}); 
+});

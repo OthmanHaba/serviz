@@ -1,11 +1,12 @@
-import { View, StyleSheet, ScrollView, SafeAreaView, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, SafeAreaView, Image, Alert } from 'react-native';
 import { Text, Button, TextInput, ProgressBar, useTheme, Card } from 'react-native-paper';
-import { useState } from 'react';
+import {  useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
 import useServiceStore from '@/stores/serviceStore';
-import { LockUpRequest } from '@/types';
-import { lockup } from "@/lib/api/service"
+import { ActiveRequest, LockUpRequest } from '@/types';
+import { lockup, userApproveActiveRequest } from "@/lib/api/service"
+import {Provider} from "@/types"
 
 
 export default function RequestServiceScreen() {
@@ -16,6 +17,9 @@ export default function RequestServiceScreen() {
     longitude: string;
   }>();
 
+  const [ notFound,setNotFound ] = useState<Boolean>(false)
+  const [provider, setProvider] = useState<Provider| null>(null);
+  const [activeRequest, setActiveRequest] = useState<ActiveRequest| null>(null)
   const [loadingLockup, setLoadingLockup] = useState<boolean>(false)
 
   const [step, setStep] = useState(1);
@@ -67,22 +71,34 @@ export default function RequestServiceScreen() {
           </SafeAreaView>
         );
       case 3:
-        return (
+        return !notFound ?  (
           <SafeAreaView style={styles.stepContainer}>
             <Text variant="titleLarge" style={styles.stepTitle}>Confirmation</Text>
             <Card style={styles.summaryCard}>
               <Card.Content>
+                
                 <Text variant="titleMedium">Service Type:</Text>
                 <Text style={styles.summaryText}>{selectedService?.name}</Text>
 
-                <Text variant="titleMedium" style={styles.summaryLabel}>Location:</Text>
-                <Text style={styles.summaryText}>Current Location</Text>
+                {/* <Text variant="titleMedium" style={styles.summaryLabel}>Location:</Text>
+                <Text style={styles.summaryText}>Current Location</Text> */}
 
                 <Text variant="titleMedium" style={styles.summaryLabel}>Estimated Price:</Text>
-                <Text style={styles.summaryText}>{price}</Text>
+                <Text style={styles.summaryText}>{activeRequest?.price}</Text>
               </Card.Content>
             </Card>
           </SafeAreaView>
+        ) : (
+          <View style={styles.stepContainer}>
+            <Text variant="titleLarge" style={styles.stepTitle}>No Service Available</Text>
+            <Card style={styles.summaryCard}>
+              <Card.Content>
+                <Text style={styles.summaryText}>
+                  Sorry, there are no service providers available in your area at this time. Please try again later.
+                </Text>
+              </Card.Content>
+            </Card>
+          </View>
         );
       default:
         return null;
@@ -95,25 +111,44 @@ export default function RequestServiceScreen() {
       return;
     }
     try {
-      const res = await lockup({
+      
+      const data = {
         service_id: selectedService.id,
         coordinate: {
-          longitude: params.latitude,
           latitude: params.latitude,
+          longitude: params.longitude,
         }
-      });
+      }
+
+      console.log(data);
+
+      const res = await lockup(data);
+
+      if(res.status == 204) {
+        setNotFound(true);
+      }else if (res.status == 201){
+        console.log(res.data);
+        setProvider(res.data.provider);
+        setActiveRequest(res.data.active_request);
+        setNotFound(false);
+      }
+      setStep(step + 1);
+
 
     } catch (e) {
       console.error(e);
     }
 
-    // setPrice(200);
-    // setStep(step + 1);
+
   };
   const onSubmit = async () => {
     try {
-      // TODO: Implement API call to create service request
-      router.push('/active-requests');
+      if(!activeRequest){
+        return;
+      }
+      const res = await userApproveActiveRequest(activeRequest?.id);
+      console.log(res);
+      router.push(`/active-requests?id=${activeRequest?.id}`);
     } catch (error) {
       console.error(error);
     }
@@ -150,7 +185,7 @@ export default function RequestServiceScreen() {
           >
             Next
           </Button>
-        ) : (
+        ) : !notFound && (
           <Button
             mode="contained"
             onPress={onSubmit}

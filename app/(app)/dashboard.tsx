@@ -6,7 +6,8 @@ import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { toggleActiveStatus, updateLocation } from '@/lib/api/provider';
 import { useAuthStore } from '@/stores/authStore';
-
+import { usePushNotification } from '@/hooks/usePushNotification';
+import { updateExpoToken } from '@/lib/api/provider';
 type DailyStats = {
   totalEarnings: number;
   completedRequests: number;
@@ -16,7 +17,7 @@ type DailyStats = {
 
 export default function DashboardScreen() {
   const theme = useTheme();
-  const [isOnline, setIsOnline] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
@@ -33,6 +34,24 @@ export default function DashboardScreen() {
     rating: 4.8,
   });
 
+  // const {expoPushToken} = usePushNotification();
+
+  // useEffect(() => {
+  //   const updateToken = async () => {
+  //     if (expoPushToken && isOnline) {
+  //       // Send the push token to your backend when provider goes online
+  //       try {
+  //         await updateExpoToken(expoPushToken);
+  //       } catch (error) {
+  //         console.error('Error updating push token:', error);
+  //       }
+  //     }
+  //   }
+
+  //   updateToken();
+
+  // }, [expoPushToken]);
+
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let locationUpdateInterval: NodeJS.Timeout | null = null;
@@ -45,9 +64,9 @@ export default function DashboardScreen() {
           return;
         }
 
-        if(user){
-          setIsOnline(user.is_active);
-        }
+        // if(user){
+        //   setIsOnline(user.is_active);
+        // }
 
         // Get initial location
         let initialLocation = await Location.getCurrentPositionAsync({
@@ -67,7 +86,7 @@ export default function DashboardScreen() {
         subscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.High,
-            timeInterval: 5000, // Update every 5 seconds
+            timeInterval: 10000, // Update every 5 seconds
             distanceInterval: 10, // Update every 10 meters
           },
           (newLocation) => {
@@ -109,8 +128,9 @@ export default function DashboardScreen() {
 
   const toggleOnlineStatus = async () => {
     try {
-      const response = await toggleActiveStatus(!isOnline);
-      setIsOnline(response.is_active);
+  await toggleActiveStatus(!isOnline).then(res => {
+        setIsOnline(res.is_active);
+      });
     } catch (error) {
       console.error('Error toggling active status:', error);
       Alert.alert('Error', 'Failed to update status. Please try again.');
@@ -133,6 +153,42 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Animated.View style={{
+        position: 'absolute',
+        top: 60,
+        right: 16,
+        zIndex: 1,
+        backgroundColor: '#FF4444',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        opacity: new Animated.Value(1),
+        transform: [{
+          scale: new Animated.Value(1)
+        }],
+      }}>
+        <View style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: '#FFFFFF',
+          marginRight: 8,
+        }} />
+        <Text style={{
+          color: '#FFFFFF', 
+          fontSize: 14,
+          fontWeight: '600',
+          letterSpacing: 0.3,
+        }}>New Request Available</Text>
+      </Animated.View>
+
       {location ? (
         <MapView
           provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
