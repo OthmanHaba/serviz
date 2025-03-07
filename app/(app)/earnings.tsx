@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Dimensions, SafeAreaView } from 'react-native';
 import { Text, Card, SegmentedButtons, useTheme } from 'react-native-paper';
 import { useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -70,14 +70,14 @@ const BarChart = ({ data, labels }: { data: number[], labels: string[] }) => {
       <View style={barStyles.barsContainer}>
         {data.map((value, index) => (
           <View key={index} style={barStyles.barWrapper}>
-            <View 
+            <View
               style={[
-                barStyles.bar, 
-                { 
+                barStyles.bar,
+                {
                   height: `${(value / maxValue) * 100}%`,
                   backgroundColor: theme.colors.primary,
                 }
-              ]} 
+              ]}
             />
             <Text style={barStyles.label}>{labels[index]}</Text>
           </View>
@@ -208,7 +208,7 @@ export default function EarningsScreen() {
       <Card style={styles.chartCard}>
         <Card.Content>
           <Text variant="titleMedium" style={styles.chartTitle}>Earnings Trend</Text>
-          <BarChart 
+          <BarChart
             data={mockChartData[timeRange as keyof typeof mockChartData].data}
             labels={mockChartData[timeRange as keyof typeof mockChartData].labels}
           />
@@ -226,7 +226,7 @@ export default function EarningsScreen() {
               <View style={styles.transactionInfo}>
                 <MaterialCommunityIcons
                   name={transaction.serviceType === 'towing' ? 'tow-truck' :
-                        transaction.serviceType === 'gas' ? 'gas-station' : 'wrench'}
+                    transaction.serviceType === 'gas' ? 'gas-station' : 'wrench'}
                   size={24}
                   color={theme.colors.primary}
                 />
@@ -256,6 +256,7 @@ export default function EarningsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: 60,
     backgroundColor: '#f5f5f5',
   },
   header: {

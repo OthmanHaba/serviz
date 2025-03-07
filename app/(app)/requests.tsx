@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getActiveRequests } from '@/lib/api/provider';
 import { acceptOrDeclineRequset } from '@/lib/api/service';
+import { useRouter } from 'expo-router';
 type ServiceRequest = {
   id: number;
   status: 'PendingProviderApproved';
@@ -31,6 +32,7 @@ export default function RequestsScreen() {
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[] | null>(null)
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {
@@ -48,6 +50,10 @@ export default function RequestsScreen() {
 
   const handleAcceptRequest = async (request: ServiceRequest) => {
     const res = await acceptOrDeclineRequset(request.id,'approved');
+    if(res.status == 201){
+      router.push(`/active-requests?id=${res.data.id}`);
+    }
+    
   };
 
   const handleDeclineRequest = (request : ServiceRequest) => {

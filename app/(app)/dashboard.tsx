@@ -8,6 +8,8 @@ import { toggleActiveStatus, updateLocation } from '@/lib/api/provider';
 import { useAuthStore } from '@/stores/authStore';
 import { usePushNotification } from '@/hooks/usePushNotification';
 import { updateExpoToken } from '@/lib/api/provider';
+import { refreshServiceForUser } from '@/lib/api/service';
+import { useRouter } from 'expo-router';
 type DailyStats = {
   totalEarnings: number;
   completedRequests: number;
@@ -34,23 +36,27 @@ export default function DashboardScreen() {
     rating: 4.8,
   });
 
-  // const {expoPushToken} = usePushNotification();
+  const router = useRouter();
 
-  // useEffect(() => {
-  //   const updateToken = async () => {
-  //     if (expoPushToken && isOnline) {
-  //       // Send the push token to your backend when provider goes online
-  //       try {
-  //         await updateExpoToken(expoPushToken);
-  //       } catch (error) {
-  //         console.error('Error updating push token:', error);
-  //       }
-  //     }
-  //   }
+  /** Push notificatino
+  const {expoPushToken} = usePushNotification();
 
-  //   updateToken();
+  useEffect(() => {
+    const updateToken = async () => {
+      if (expoPushToken && isOnline) {
+        // Send the push token to your backend when provider goes online
+        try {
+          await updateExpoToken(expoPushToken);
+        } catch (error) {
+          console.error('Error updating push token:', error);
+        }
+      }
+    }
 
-  // }, [expoPushToken]);
+    updateToken();
+
+  }, [expoPushToken]);
+   */
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
@@ -125,6 +131,25 @@ export default function DashboardScreen() {
       }
     };
   }, [isOnline]);
+
+  useEffect(() => {
+    const checkActiveRequest = async () => {
+      try {
+        
+        const res = await refreshServiceForUser();
+
+        if(res.status ===200){
+          router.push(`/active-requests?id=${res.data.id}`);
+        }
+
+      } catch (error) {
+        console.error('Error checking active request:', error);
+      }
+    };
+
+    const interval = setInterval(checkActiveRequest, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleOnlineStatus = async () => {
     try {

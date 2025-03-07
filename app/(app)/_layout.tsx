@@ -59,7 +59,7 @@ export default function AppLayout() {
         options={{
           title: 'History',
           headerShown: false,
-          href: userRole === 'user' ? '/history' : null,
+          // href: userRole === 'user' ? '/history' : null,
           tabBarIcon: ({ color, size }) => (
             <AntDesign name="calendar" size={size} color={color} />
           ),
@@ -94,7 +94,8 @@ export default function AppLayout() {
         options={{
           title: 'Earnings',
           headerShown: false,
-          href: userRole === 'provider' ? '/earnings' : null,
+          // href: userRole === 'provider' ? '/earnings' : null,
+          href: null,
           tabBarIcon: ({ color, size }) => (
             <AntDesign name="wallet" size={size} color={color} />
           ),
@@ -107,7 +108,7 @@ export default function AppLayout() {
         options={{
           title: 'Profile',
           headerShown: false,
-          href: userRole === 'user' ? '/profile' : null,
+          // href: userRole === 'user' ? '/profile' : null,
           tabBarIcon: ({ color, size }) => (
             <AntDesign name="user" size={size} color={color} />
           ),

@@ -1,14 +1,17 @@
-import { View, StyleSheet, Platform } from 'react-native';
-import { Text, Card, Button, Avatar, IconButton, Portal, Modal } from 'react-native-paper';
+import { View, StyleSheet, Platform, ActivityIndicator, Alert } from 'react-native';
+import { Text, Card, Button, Avatar, IconButton } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { io } from 'socket.io-client';
-import {getActiveRequestData} from "@/lib/api/service"
-import { useLocalSearchParams } from 'expo-router';
-import { number } from 'zod';
+import { getActiveRequestData } from "@/lib/api/service"
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuthStore } from '@/stores/authStore';
+import { completeActiveRequest } from '@/lib/api/request';
 
-type Provider = {
+/** types
+ * 
+ * @returns 
+ * type Provider = {
   id: string;
   name: string;
   rating: number;
@@ -38,37 +41,22 @@ type ServiceRequest = {
   estimatedArrival?: string;
 };
 
+ */
+
 export default function ActiveRequestsScreen() {
-  const [activeRequest, setActiveRequest] = useState({
-    id: '123',
-    status: 'accepted',
-    serviceType: 'towing',
-    provider: {
-      id: 'p1',
-      name: 'John Smith',
-      rating: 4.8,
-      phone: '+1234567890',
-      current_location: {
-        latitude: 37.7749,
-        longitude: -122.4194,
-      },
-    },
-    user: {
-      id: 'p2',
-      name: 'John Smith',
-      rating: 4.8,
-      phone: '+1234567890',
-      current_location: {
-        latitude: 37.749,
-        longitude: -122.4194,
-      },
-    },
-    createdAt: new Date().toISOString(),
-    estimatedArrival: '10 minutes',
-  });
+  const [activeRequest, setActiveRequest] = useState(null);
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const res = await getActiveRequestData(Number(params.id));
+      console.log(res.data);
+      setActiveRequest(res.data);
+    })();
+  }, [])
 
   const params = useLocalSearchParams();
-
+  const { user } = useAuthStore();
   useEffect(() => {
     const statusUpdateInterval = setInterval(async () => {
       const res = await getActiveRequestData(Number(params.id));
@@ -86,7 +74,7 @@ export default function ActiveRequestsScreen() {
       case 'PendingUserApproved':
         return '#FCD34D';
       case 'PendingProviderApproved':
-        return '#60A5FA'; 
+        return '#60A5FA';
       case 'InProgress':
         return '#F472B6';
       case 'Completed':
@@ -137,7 +125,7 @@ export default function ActiveRequestsScreen() {
             <IconButton
               icon="phone"
               mode="contained"
-              onPress={() => {/* TODO: Implement call */}}
+              onPress={() => {/* TODO: Implement call */ }}
             />
           </View>
         </Card.Content>
@@ -154,6 +142,20 @@ export default function ActiveRequestsScreen() {
     );
   }
 
+  const handleComplete = async () => {
+    
+    setIsLoading(true);
+
+    await completeActiveRequest(activeRequest.id).then(res => {
+      setIsLoading(false);
+      Alert.alert('request completed successfully');
+      router.back()
+    }).finally(() => {
+      setIsLoading(false);
+    });
+
+  }
+
   return (
     <View style={styles.container}>
       <MapView
@@ -166,27 +168,36 @@ export default function ActiveRequestsScreen() {
           longitudeDelta: 0.0421,
         }}
       >
-          {activeRequest?.provider && (
-        <Marker
-          key={activeRequest.provider.id}
-          coordinate={activeRequest.provider.current_location}
-          title={activeRequest.provider.name}
-        >
-          <MaterialCommunityIcons name="car-connected" size={32} color={'red'} />
-        </Marker>
-      )}
-      {activeRequest?.user?.current_location && (
-        <Marker
-          key={activeRequest.user.id}
-          coordinate={activeRequest.user.current_location}
-          title={activeRequest.user.name}
-        >
-          <MaterialCommunityIcons name="account" size={32} color="#FF5733" />
-        </Marker>
-      )}
+        {activeRequest?.provider && (
+          <Marker
+            key={activeRequest.provider.id}
+            coordinate={activeRequest.provider.current_location}
+            title={activeRequest.provider.name}
+          >
+            <MaterialCommunityIcons name="car-connected" size={32} color={'red'} />
+          </Marker>
+        )}
+        {activeRequest?.user?.current_location && (
+          <Marker
+            key={activeRequest.user.id}
+            coordinate={activeRequest.user.current_location}
+            title={activeRequest.user.name}
+          >
+            <MaterialCommunityIcons name="account" size={32} color="#FF5733" />
+          </Marker>
+        )}
       </MapView>
 
       <View style={styles.content}>
+        {(user.role === 'provider') && 
+        <View style={styles.statusCard}>
+          <View>
+            <Button mode="contained" onPress={() => handleComplete()} style={{ marginTop: 10 }}>
+              Complete
+            </Button>
+          </View>
+        </View>
+        }
         <Card style={styles.statusCard}>
           <Card.Content>
             <View style={styles.statusHeader}>
@@ -203,7 +214,22 @@ export default function ActiveRequestsScreen() {
           </Card.Content>
         </Card>
 
+
         {renderProviderCard()}
+      {isLoading && (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      )}
       </View>
     </View>
   );
