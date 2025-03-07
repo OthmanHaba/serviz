@@ -20,8 +20,15 @@ const getActiveRequestData = async (id :number) => {
   return await api.get(`/service/track/get-status?active_request_id=${id}`)
 }
 
-const acceptOrDeclineRequset = async (id: number) => {
-  
+const acceptOrDeclineRequset = async (id: number, status: 'approved' |'declined') => {
+  return await api.post('/service/provider/conform-service', {
+    active_request_id:id,
+    status: status
+  });
 }
 
-export { getServices,lockup,userApproveActiveRequest,getActiveRequestData ,acceptOrDeclineRequset};
+const refreshServiceForUser = async () => {
+  return api.get('/service/user/refresh-active-request');
+}
+
+export { getServices,lockup,userApproveActiveRequest,getActiveRequestData ,acceptOrDeclineRequset,refreshServiceForUser};

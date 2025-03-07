@@ -19,11 +19,21 @@ type Provider = {
   };
 };
 
+type User = {
+  id:string;
+  name:string;
+  current_location: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 type ServiceRequest = {
   id: string;
   status: 'pending' | 'accepted' | 'en_route' | 'arrived' | 'in_progress' | 'completed';
   serviceType: string;
   provider?: Provider;
+  user:User;
   createdAt: string;
   estimatedArrival?: string;
 };
@@ -40,6 +50,16 @@ export default function ActiveRequestsScreen() {
       phone: '+1234567890',
       current_location: {
         latitude: 37.7749,
+        longitude: -122.4194,
+      },
+    },
+    user: {
+      id: 'p2',
+      name: 'John Smith',
+      rating: 4.8,
+      phone: '+1234567890',
+      current_location: {
+        latitude: 37.749,
         longitude: -122.4194,
       },
     },
@@ -146,18 +166,24 @@ export default function ActiveRequestsScreen() {
           longitudeDelta: 0.0421,
         }}
       >
-        {activeRequest.provider && (
-          <Marker
-            coordinate={activeRequest.provider.current_location}
-            title={activeRequest.provider.name}
-          >
-            <MaterialCommunityIcons
-              name="car-connected"
-              size={32}
-              color={getStatusColor()}
-            />
-          </Marker>
-        )}
+          {activeRequest?.provider && (
+        <Marker
+          key={activeRequest.provider.id}
+          coordinate={activeRequest.provider.current_location}
+          title={activeRequest.provider.name}
+        >
+          <MaterialCommunityIcons name="car-connected" size={32} color={'red'} />
+        </Marker>
+      )}
+      {activeRequest?.user?.current_location && (
+        <Marker
+          key={activeRequest.user.id}
+          coordinate={activeRequest.user.current_location}
+          title={activeRequest.user.name}
+        >
+          <MaterialCommunityIcons name="account" size={32} color="#FF5733" />
+        </Marker>
+      )}
       </MapView>
 
       <View style={styles.content}>

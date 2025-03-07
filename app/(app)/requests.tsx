@@ -1,10 +1,11 @@
-import { View, StyleSheet, FlatList, Image } from 'react-native';
+import { View, StyleSheet, FlatList, Image, Alert } from 'react-native';
 import { Text, Card, Button, Chip, useTheme, Portal, Modal } from 'react-native-paper';
 import { useEffect, useState } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getActiveRequests } from '@/lib/api/provider';
+import { acceptOrDeclineRequset } from '@/lib/api/service';
 type ServiceRequest = {
   id: number;
   status: 'PendingProviderApproved';
@@ -45,9 +46,8 @@ export default function RequestsScreen() {
     return 'car-wrench';
   };
 
-  const handleAcceptRequest = (request: ServiceRequest) => {
-
-    console.log('Accepting request:', request.id);
+  const handleAcceptRequest = async (request: ServiceRequest) => {
+    const res = await acceptOrDeclineRequset(request.id,'approved');
   };
 
   const handleDeclineRequest = (request : ServiceRequest) => {
