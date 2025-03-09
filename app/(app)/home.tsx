@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, Image,ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
 import { Text, Card, Button, useTheme } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import MapView, { Marker } from 'react-native-maps';
@@ -7,17 +7,18 @@ import { router, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import useServiceStore from '@/stores/serviceStore';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {getActiveRequestData, refreshServiceForUser} from "@/lib/api/service"
+import { getActiveRequestData, refreshServiceForUser } from "@/lib/api/service"
 import { updateLocation } from '@/lib/api/provider';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { services, fetchServices, setSelectedService } = useServiceStore();
-
+  const { user } = useAuthStore();
   const router = useRouter();
-  
+
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -26,7 +27,7 @@ export default function HomeScreen() {
         setErrorMsg('Permission to access location was denied');
         return;
       }
-      
+
 
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location);
@@ -37,14 +38,14 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  
+
   useEffect(() => {
     const checkActiveRequest = async () => {
       try {
-        
+
         const res = await refreshServiceForUser();
 
-        if(res.status ===200){
+        if (res.status === 200) {
           router.push(`/active-requests?id=${res.data.id}`);
         }
 
@@ -58,11 +59,11 @@ export default function HomeScreen() {
   }, []);
 
 
-  const onServiceSelect = (service : any) => {
+  const onServiceSelect = (service: any) => {
     setSelectedService(service);
     router.push({
       pathname: '/request-service',
-      params: { 
+      params: {
         service,
         latitude: location?.coords.latitude,
         longitude: location?.coords.longitude,
@@ -71,7 +72,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {location ? (
         <MapView
           style={styles.map}
@@ -82,6 +83,32 @@ export default function HomeScreen() {
             longitudeDelta: 0.0421,
           }}
         >
+          <View style={{
+            position: 'absolute',
+            top: 60,
+            left: 20,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            borderRadius: 25,
+            padding: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: {
+              width: 0,
+              height: 2,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+          }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: '#1006F3'
+            }}>
+              wallet: ${user?.wallet.balance.toFixed(2)}
+            </Text>
+          </View>
           <Marker
             coordinate={{
               latitude: location.coords.latitude,
@@ -122,17 +149,17 @@ export default function HomeScreen() {
             </Card.Content>
           </Card>
         )) : (
-          <View style={{flex:1, justifyContent:'center', alignItems:'center'}}>
-            <Card style={[styles.serviceCard, {backgroundColor: '#f5f5f5'}]}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Card style={[styles.serviceCard, { backgroundColor: '#f5f5f5' }]}>
               <Card.Content style={styles.serviceCardContent}>
-                <View style={{width: 40, height: 40, backgroundColor: '#e0e0e0', borderRadius: 20}} />
-                <View style={{width: '80%', height: 20, backgroundColor: '#e0e0e0', marginTop: 8, borderRadius: 4}} />
+                <View style={{ width: 40, height: 40, backgroundColor: '#e0e0e0', borderRadius: 20 }} />
+                <View style={{ width: '80%', height: 20, backgroundColor: '#e0e0e0', marginTop: 8, borderRadius: 4 }} />
               </Card.Content>
             </Card>
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -151,7 +178,7 @@ const styles = StyleSheet.create({
   },
   servicesContainer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 10,
     left: 0,
     right: 0,
     paddingHorizontal: 10,

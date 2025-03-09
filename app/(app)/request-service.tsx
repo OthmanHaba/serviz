@@ -1,12 +1,12 @@
 import { View, StyleSheet, ScrollView, SafeAreaView, Image, Alert } from 'react-native';
 import { Text, Button, TextInput, ProgressBar, useTheme, Card } from 'react-native-paper';
-import {  useState } from 'react';
+import { useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
 import useServiceStore from '@/stores/serviceStore';
 import { ActiveRequest, LockUpRequest } from '@/types';
 import { lockup, userApproveActiveRequest } from "@/lib/api/service"
-import {Provider} from "@/types"
+import { Provider } from "@/types"
 
 
 export default function RequestServiceScreen() {
@@ -17,11 +17,11 @@ export default function RequestServiceScreen() {
     longitude: string;
   }>();
 
-  const [ notFound,setNotFound ] = useState<Boolean>(false)
-  const [provider, setProvider] = useState<Provider| null>(null);
-  const [activeRequest, setActiveRequest] = useState<ActiveRequest| null>(null)
+  const [notFound, setNotFound] = useState<Boolean>(false)
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [activeRequest, setActiveRequest] = useState<ActiveRequest | null>(null)
   const [loadingLockup, setLoadingLockup] = useState<boolean>(false)
-
+  const [notFoundMessage, setNotFoundMessage] = useState("")
   const [step, setStep] = useState(1);
   const totalSteps = 3;
 
@@ -71,12 +71,12 @@ export default function RequestServiceScreen() {
           </SafeAreaView>
         );
       case 3:
-        return !notFound ?  (
+        return !notFound ? (
           <SafeAreaView style={styles.stepContainer}>
             <Text variant="titleLarge" style={styles.stepTitle}>Confirmation</Text>
             <Card style={styles.summaryCard}>
               <Card.Content>
-                
+
                 <Text variant="titleMedium">Service Type:</Text>
                 <Text style={styles.summaryText}>{selectedService?.name}</Text>
 
@@ -94,7 +94,8 @@ export default function RequestServiceScreen() {
             <Card style={styles.summaryCard}>
               <Card.Content>
                 <Text style={styles.summaryText}>
-                  Sorry, there are no service providers available in your area at this time. Please try again later.
+                  {notFoundMessage}
+                  {/* Sorry, there are no service providers available in your area at this time. Please try again later. */}
                 </Text>
               </Card.Content>
             </Card>
@@ -111,7 +112,7 @@ export default function RequestServiceScreen() {
       return;
     }
     try {
-      
+
       const data = {
         service_id: selectedService.id,
         coordinate: {
@@ -120,13 +121,14 @@ export default function RequestServiceScreen() {
         }
       }
 
-      console.log(data);
-
       const res = await lockup(data);
 
-      if(res.status == 204) {
+      if (res.status == 203) {
         setNotFound(true);
-      }else if (res.status == 201){
+        setNotFoundMessage(res.data.message);
+        Alert.alert(res.data.message);
+      }
+      else if (res.status == 201) {
         console.log(res.data);
         setProvider(res.data.provider);
         setActiveRequest(res.data.active_request);
@@ -143,7 +145,7 @@ export default function RequestServiceScreen() {
   };
   const onSubmit = async () => {
     try {
-      if(!activeRequest){
+      if (!activeRequest) {
         return;
       }
       const res = await userApproveActiveRequest(activeRequest?.id);

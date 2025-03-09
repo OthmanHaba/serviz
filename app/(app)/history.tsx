@@ -1,47 +1,93 @@
-import { View, StyleSheet, FlatList, SafeAreaView } from 'react-native';
+import { View, StyleSheet, FlatList, SafeAreaView, Image } from 'react-native';
 import { Text, Card, Chip, Searchbar, Menu, Button, IconButton, useTheme } from 'react-native-paper';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { history } from '@/lib/api/service';
+
+type VehicleInfo = {
+  make: string;
+  model: string;
+  year: string;
+  color: string;
+  vin: number;
+};
+
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  vehicle_info: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type Service = {
+  id: number;
+  name: string;
+  description: string;
+  image: string;
+  created_at: string;
+  updated_at: string;
+};
 
 type HistoryItem = {
-  id: string;
-  serviceType: string;
+  id: number;
+  user_id: number;
+  provider_id: number;
+  service_id: number;
+  price: string;
   status: string;
-  date: string;
-  provider: {
-    name: string;
-    rating: number;
-  };
-  cost: number;
-  location: string;
+  created_at: string;
+  updated_at: string;
+  user: User;
+  provider: User;
+  service: Service;
 };
 
 const mockHistory: HistoryItem[] = [
   {
-    id: '1',
-    serviceType: 'towing',
-    status: 'completed',
-    date: '2024-01-20T14:30:00Z',
-    provider: {
-      name: 'John Smith',
-      rating: 4.8,
+    id: 13,
+    user_id: 3,
+    provider_id: 2,
+    service_id: 1,
+    price: "100.00",
+    status: "Completed",
+    created_at: "2025-03-06T04:55:01.000000Z",
+    updated_at: "2025-03-07T20:48:45.000000Z",
+    user: {
+      id: 3,
+      name: "user",
+      email: "user@user.com",
+      phone: "1-570-359-2656",
+      vehicle_info: '{"make":"BMW","model":"GT 10","year":"2022","color":"MediumSpringGreen","vin":65464307}',
+      role: "user",
+      is_active: true,
+      created_at: "2025-03-06T02:46:02.000000Z",
+      updated_at: "2025-03-06T02:46:02.000000Z"
     },
-    cost: 85.00,
-    location: '123 Main St, San Francisco, CA',
-  },
-  {
-    id: '2',
-    serviceType: 'gas',
-    status: 'completed',
-    date: '2024-01-15T10:15:00Z',
     provider: {
-      name: 'Mike Johnson',
-      rating: 4.9,
+      id: 2,
+      name: "provider",
+      email: "user@provider.com",
+      phone: "+1-731-896-8647",
+      vehicle_info: '{"make":"Suzuki","model":"GT 11","year":"2015","color":"HoneyDew","vin":77934196}',
+      role: "provider",
+      is_active: true,
+      created_at: "2025-03-06T02:46:02.000000Z",
+      updated_at: "2025-03-06T02:50:14.000000Z"
     },
-    cost: 45.00,
-    location: '456 Market St, San Francisco, CA',
-  },
-  // Add more mock data as needed
+    service: {
+      id: 1,
+      name: "Towing",
+      description: "Towing services",
+      image: "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png",
+      created_at: "2025-03-06T02:46:02.000000Z",
+      updated_at: "2025-03-06T02:46:02.000000Z"
+    }
+  }
 ];
 
 export default function HistoryScreen() {
@@ -51,19 +97,16 @@ export default function HistoryScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [sortMenuVisible, setSortMenuVisible] = useState(false);
   const [selectedSort, setSelectedSort] = useState<string>('date_desc');
+  const [historyItems, setHistoryItems] = useState<HistoryItem | null>(null)
+  useEffect(() => {
+    (async () => {
+      const res = await history()
+       setHistoryItems(res.data);
+    })();
 
-  const getServiceIcon = (type: string) => {
-    switch (type) {
-      case 'towing':
-        return 'tow-truck';
-      case 'gas':
-        return 'gas-station';
-      case 'mechanic':
-        return 'wrench';
-      default:
-        return 'help';
-    }
-  };
+  }, [])
+
+ 
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -82,31 +125,32 @@ export default function HistoryScreen() {
 
   const filterHistory = (items: HistoryItem[]) => {
     let filtered = items;
+    if(!items) return;
 
     // Apply search
     if (searchQuery) {
       filtered = filtered.filter(item =>
         item.provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.location.toLowerCase().includes(searchQuery.toLowerCase())
+        item.user.vehicle_info.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // Apply service type filter
     if (selectedFilter) {
-      filtered = filtered.filter(item => item.serviceType === selectedFilter);
+      filtered = filtered.filter(item => item.service.name.toLowerCase() === selectedFilter.toLowerCase());
     }
 
     // Apply sorting
     filtered.sort((a, b) => {
       switch (selectedSort) {
         case 'date_desc':
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'date_asc':
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         case 'cost_desc':
-          return b.cost - a.cost;
+          return parseFloat(b.price) - parseFloat(a.price);
         case 'cost_asc':
-          return a.cost - b.cost;
+          return parseFloat(a.price) - parseFloat(b.price);
         default:
           return 0;
       }
@@ -115,51 +159,62 @@ export default function HistoryScreen() {
     return filtered;
   };
 
-  const renderHistoryItem = ({ item }: { item: HistoryItem }) => (
-    <Card style={styles.historyCard}>
-      <Card.Content>
-        <View style={styles.cardHeader}>
-          <View style={styles.serviceInfo}>
-            <MaterialCommunityIcons
-              name={getServiceIcon(item.serviceType)}
-              size={24}
-              color={theme.colors.primary}
-            />
-            <Text variant="titleMedium" style={styles.serviceType}>
-              {item.serviceType.charAt(0).toUpperCase() + item.serviceType.slice(1)}
+  const renderHistoryItem = ({ item }: { item: HistoryItem }) => {
+    const vehicleInfo: VehicleInfo = JSON.parse(item.user.vehicle_info);
+
+    return (
+      <Card style={styles.historyCard}>
+        <Card.Content>
+          <View style={styles.cardHeader}>
+            <View style={styles.serviceInfo}>
+              
+              <Image
+                style={{height:24,width:24}}
+                resizeMode="contain"
+                source={{uri: item.service.image}}
+              />
+              <Text variant="titleMedium" style={styles.serviceType}>
+                {item.service.name}
+              </Text>
+            </View>
+            <Text variant="labelLarge" style={styles.cost}>
+              ${parseFloat(item.price).toFixed(2)}
             </Text>
           </View>
-          <Text variant="labelLarge" style={styles.cost}>
-            {formatCurrency(item.cost)}
-          </Text>
-        </View>
 
-        <View style={styles.dateContainer}>
-          <MaterialCommunityIcons name="clock-outline" size={16} color="#6B7280" />
-          <Text variant="bodySmall" style={styles.date}>
-            {formatDate(item.date)}
-          </Text>
-        </View>
+          <View style={styles.dateContainer}>
+            <MaterialCommunityIcons name="clock-outline" size={16} color="#6B7280" />
+            <Text variant="bodySmall" style={styles.date}>
+              {formatDate(item.created_at)}
+            </Text>
+          </View>
 
-        <View style={styles.locationContainer}>
-          <MaterialCommunityIcons name="map-marker-outline" size={16} color="#6B7280" />
-          <Text variant="bodySmall" style={styles.location} numberOfLines={1}>
-            {item.location}
-          </Text>
-        </View>
+          <View style={styles.vehicleContainer}>
+            <MaterialCommunityIcons name="car" size={16} color="#6B7280" />
+            <Text variant="bodySmall" style={styles.location} numberOfLines={1}>
+              {vehicleInfo.make ?? ''} {vehicleInfo.model ?? ''} ({vehicleInfo.year ?? ''}) - {vehicleInfo.color ?? ''}
+            </Text>
+          </View>
 
-        <View style={styles.providerContainer}>
-          <View style={styles.providerInfo}>
-            <Text variant="bodyMedium">{item.provider.name}</Text>
-            <View style={styles.ratingContainer}>
-              <MaterialCommunityIcons name="star" size={16} color="#FCD34D" />
-              <Text variant="bodySmall">{item.provider.rating}</Text>
+          <View style={styles.providerContainer}>
+            <View style={styles.providerInfo}>
+              <Text variant="bodyMedium">{item.provider.name}</Text>
+              <View style={styles.statusContainer}>
+                <MaterialCommunityIcons
+                  name={item.status.toLowerCase() === 'completed' ? 'check-circle' : 'clock-outline'}
+                  size={16}
+                  color={item.status.toLowerCase() === 'completed' ? '#10B981' : '#F59E0B'}
+                />
+                <Text variant="bodySmall" style={{ marginLeft: 4, color: item.status.toLowerCase() === 'completed' ? '#10B981' : '#F59E0B' }}>
+                  {item.status}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
-      </Card.Content>
-    </Card>
-  );
+        </Card.Content>
+      </Card>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -273,9 +328,9 @@ export default function HistoryScreen() {
       )}
 
       <FlatList
-        data={filterHistory(mockHistory)}
+        data={filterHistory(historyItems)}
         renderItem={renderHistoryItem}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -349,7 +404,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     color: '#6B7280',
   },
-  locationContainer: {
+  vehicleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
@@ -371,10 +426,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  ratingContainer: {
+  statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 8,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   emptyContainer: {
     flex: 1,

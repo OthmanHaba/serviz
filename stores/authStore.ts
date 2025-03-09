@@ -14,10 +14,16 @@ interface User {
   email_verified_at: string;
   phone: string;
   vehicle_info: VehicleInfo;
+  wallet: Wallet;
   role: 'user' | 'provider';
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface Wallet {
+  id: number,
+  balance : number,
 }
 
 interface AuthStore {

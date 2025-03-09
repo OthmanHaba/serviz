@@ -28,7 +28,12 @@ const acceptOrDeclineRequset = async (id: number, status: 'approved' |'declined'
 }
 
 const refreshServiceForUser = async () => {
-  return api.get('/service/user/refresh-active-request');
+  return await api.get('/service/user/refresh-active-request');
 }
 
-export { getServices,lockup,userApproveActiveRequest,getActiveRequestData ,acceptOrDeclineRequset,refreshServiceForUser};
+
+const history = async () => {
+  return await api.get('/user/history');
+}
+
+export { history,getServices,lockup,userApproveActiveRequest,getActiveRequestData ,acceptOrDeclineRequset,refreshServiceForUser};
