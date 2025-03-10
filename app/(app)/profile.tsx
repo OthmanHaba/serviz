@@ -1,230 +1,188 @@
-import { View, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
 import {
   Text,
   Avatar,
-  List,
-  Switch,
   Button,
-  Card,
-  IconButton,
   useTheme,
+  Surface,
   Divider,
 } from 'react-native-paper';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { profile } from '@/lib/api/provider';
 
-type Vehicle = {
-  id: string;
-  type: string;
-  make: string;
-  model: string;
-  year: string;
-  licensePlate: string;
-};
-
-type PaymentMethod = {
-  id: string;
-  type: 'card' | 'paypal';
-  last4?: string;
-  expiryDate?: string;
-  email?: string;
-};
+type Profile = {
+  id: number;
+  name: string;
+  email: string;
+  remember_token: string;
+  email_verified_at: string;
+  phone: string;
+  vehicle_info:object;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  wallet: {
+    balance: number;
+  };
+  provider_services?: {
+    service: number;
+    price: string;
+  }[];
+}
 
 export default function ProfileScreen() {
   const theme = useTheme();
-  const [darkMode, setDarkMode] = useState(false);
-  const [notifications, setNotifications] = useState(true);
-  const [locationTracking, setLocationTracking] = useState(true);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [vehicles] = useState<Vehicle[]>([
-    {
-      id: '1',
-      type: 'Sedan',
-      make: 'Toyota',
-      model: 'Camry',
-      year: '2020',
-      licensePlate: 'ABC123',
-    },
-    {
-      id: '2',
-      type: 'SUV',
-      make: 'Honda',
-      model: 'CR-V',
-      year: '2019',
-      licensePlate: 'XYZ789',
-    },
-  ]);
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
-  const [paymentMethods] = useState<PaymentMethod[]>([
-    {
-      id: '1',
-      type: 'card',
-      last4: '4242',
-      expiryDate: '12/24',
-    },
-    {
-      id: '2',
-      type: 'paypal',
-      email: 'user@example.com',
-    },
-  ]);
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await profile();
+      setUserProfile(res.data);
+      console.log('----------------------------');
+      console.log(userProfile);
+    } catch (err) {
+      setError('Failed to load profile. Please try again.');
+      console.error('Profile loading error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderVehicleCard = (vehicle: Vehicle) => (
-    <Card key={vehicle.id} style={styles.vehicleCard}>
-      <Card.Content>
-        <View style={styles.vehicleHeader}>
-          <View style={styles.vehicleInfo}>
-            <MaterialCommunityIcons
-              name="car"
-              size={24}
-              color={theme.colors.primary}
-            />
-            <View style={styles.vehicleDetails}>
-              <Text variant="titleMedium">
-                {vehicle.make} {vehicle.model}
-              </Text>
-              <Text variant="bodySmall" style={styles.vehicleSubtext}>
-                {vehicle.year} • {vehicle.type}
-              </Text>
-            </View>
-          </View>
-          <IconButton
-            icon="pencil"
-            size={20}
-            onPress={() => {/* TODO: Implement edit vehicle */}}
-          />
-        </View>
-        <Text variant="bodySmall" style={styles.licensePlate}>
-          License Plate: {vehicle.licensePlate}
-        </Text>
-      </Card.Content>
-    </Card>
-  );
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
 
-  const renderPaymentMethod = (method: PaymentMethod) => (
-    <List.Item
-      key={method.id}
-      title={method.type === 'card' ? `•••• ${method.last4}` : method.email}
-      description={method.type === 'card' ? `Expires ${method.expiryDate}` : 'PayPal'}
-      left={props => (
-        <List.Icon
-          {...props}
-          icon={method.type === 'card' ? 'credit-card' : 'paypal'}
+  if (error || !userProfile) {
+    return (
+      <View style={styles.errorContainer}>
+        <MaterialCommunityIcons 
+          name="alert-circle-outline" 
+          size={48} 
+          color={theme.colors.error} 
         />
-      )}
-      right={props => <List.Icon {...props} icon="chevron-right" />}
-      onPress={() => {/* TODO: Implement payment method details */}}
-    />
-  );
+        <Text style={styles.errorText}>{error}</Text>
+        <Button mode="contained" onPress={loadProfile}>
+          Retry
+        </Button>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
+      <ScrollView style={styles.scrollView}>
+        <Surface style={styles.header} elevation={1}>
           <Avatar.Text
-          size={80}
-          label="JD"
-          style={styles.avatar}
-        />
-        <Text variant="headlineSmall" style={styles.name}>John Doe</Text>
-        <Text variant="bodyLarge" style={styles.email}>john.doe@example.com</Text>
-        <Button
-          mode="outlined"
-          onPress={() => {/* TODO: Implement edit profile */}}
-          style={styles.editButton}
-        >
-          Edit Profile
-        </Button>
-      </View>
+            size={80}
+            label={userProfile.name.split(' ').map(n => n[0]).join('')}
+            style={styles.avatar}
+          />
+          <View style={styles.headerInfo}>
+            <Text variant="headlineSmall" style={styles.name}>
+              {userProfile.name}
+            </Text>
+            <Text variant="bodyMedium" style={styles.role}>
+              {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
+            </Text>
+          </View>
+          <View style={styles.contactInfo}>
+            <View style={styles.contactItem}>
+              <MaterialCommunityIcons name="email" size={20} color={theme.colors.primary} />
+              <Text variant="bodyMedium" style={styles.contactText}>
+                {userProfile.email}
+              </Text>
+            </View>
+            <View style={styles.contactItem}>
+              <MaterialCommunityIcons name="phone" size={20} color={theme.colors.primary} />
+              <Text variant="bodyMedium" style={styles.contactText}>
+                {userProfile.phone}
+              </Text>
+            </View>
+          </View>
+        </Surface>
 
-      <View style={styles.section}>
-        <Text variant="titleLarge" style={styles.sectionTitle}>Vehicles</Text>
-        {vehicles.map(renderVehicleCard)}
-        <Button
-          mode="outlined"
-          icon="plus"
-          onPress={() => {/* TODO: Implement add vehicle */}}
-          style={styles.addButton}
-        >
-          Add Vehicle
-        </Button>
-      </View>
+        <Surface style={styles.section} elevation={1}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="wallet" size={24} color={theme.colors.primary} />
+            <Text variant="titleMedium" style={styles.sectionTitle}>Wallet Balance</Text>
+          </View>
+          <Text variant="displaySmall" style={styles.balance}>
+            ${userProfile.wallet.balance.toFixed(2)}
+          </Text>
+        </Surface>
 
-      <View style={styles.section}>
-        <Text variant="titleLarge" style={styles.sectionTitle}>Payment Methods</Text>
-        <Card>
-          {paymentMethods.map(renderPaymentMethod)}
+        <Surface style={styles.section} elevation={1}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="car" size={24} color={theme.colors.primary} />
+            <Text variant="titleMedium" style={styles.sectionTitle}>Vehicle Information</Text>
+          </View>
+          <Divider style={styles.divider} />
+          <View style={styles.vehicleDetails}>
+            {Object.entries(JSON.parse(userProfile.vehicle_info)).map(([key, value]) => (
+              <View key={key} style={styles.vehicleRow}>
+                <Text variant="bodyMedium" style={styles.vehicleLabel}>
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </Text>
+                <Text variant="bodyLarge">{value as string}</Text>
+              </View>
+            ))}
+            
+          </View>
+        </Surface>
+
+        {userProfile.provider_services?.length > 0 && (
+          <Surface style={styles.section} elevation={1}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="tools" size={24} color={theme.colors.primary} />
+              <Text variant="titleMedium" style={styles.sectionTitle}>Services Offered</Text>
+            </View>
+            <Divider style={styles.divider} />
+            {userProfile.provider_services.map((service, index) => (
+              <View key={index} style={styles.serviceRow}>
+                <Text variant="bodyMedium">Service #{service.service}</Text>
+                <Text variant="bodyLarge" style={styles.servicePrice}>
+                  ${service.price}
+                </Text>
+              </View>
+            ))}
+          </Surface>
+        )}
+
+        <View style={styles.actions}>
+          <Button
+            mode="contained"
+            icon="account-edit"
+            onPress={() => {/* TODO: Implement edit profile */}}
+            style={styles.actionButton}
+          >
+            Edit Profile
+          </Button>
           <Button
             mode="outlined"
-            icon="plus"
-            onPress={() => {/* TODO: Implement add payment */}}
-            style={styles.addPaymentButton}
+            icon="logout"
+            onPress={() => router.replace('/login')}
+            style={styles.actionButton}
           >
-            Add Payment Method
+            Log Out
           </Button>
-        </Card>
-      </View>
-
-      <View style={styles.section}>
-        <Text variant="titleLarge" style={styles.sectionTitle}>Settings</Text>
-        <Card>
-          <List.Item
-            title="Dark Mode"
-            left={props => <List.Icon {...props} icon="theme-light-dark" />}
-            right={() => (
-              <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
-              />
-            )}
-          />
-          <Divider />
-          <List.Item
-            title="Notifications"
-            left={props => <List.Icon {...props} icon="bell-outline" />}
-            right={() => (
-              <Switch
-                value={notifications}
-                onValueChange={setNotifications}
-              />
-            )}
-          />
-          <Divider />
-          <List.Item
-            title="Location Tracking"
-            left={props => <List.Icon {...props} icon="map-marker-outline" />}
-            right={() => (
-              <Switch
-                value={locationTracking}
-                onValueChange={setLocationTracking}
-              />
-            )}
-          />
-          <Divider />
-          <List.Item
-            title="Language"
-            description="English"
-            left={props => <List.Icon {...props} icon="translate" />}
-            right={props => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => {/* TODO: Implement language selection */}}
-          />
-        </Card>
-      </View>
-
-      <Button
-        mode="contained"
-        icon="logout"
-        onPress={() => router.replace('/login')}
-        style={styles.logoutButton}
-      >
-        Log Out
-      </Button>
-
-      <View style={styles.footer}>
-        <Text variant="bodySmall" style={styles.version}>Version 1.0.0</Text>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -234,67 +192,108 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  errorText: {
+    marginVertical: 16,
+    textAlign: 'center',
+    color: 'red',
+  },
+  header: {
+    padding: 20,
+    margin: 16,
+    borderRadius: 12,
     backgroundColor: '#fff',
   },
+  headerInfo: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
   avatar: {
-    marginBottom: 12,
+    alignSelf: 'center',
   },
   name: {
-    marginBottom: 4,
+    fontWeight: 'bold',
   },
-  email: {
-    color: '#6B7280',
-    marginBottom: 16,
+  role: {
+    color: '#666',
+    marginTop: 4,
   },
-  editButton: {
-    marginTop: 8,
+  contactInfo: {
+    marginTop: 16,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  contactText: {
+    marginLeft: 8,
+    color: '#666',
   },
   section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#fff',
   },
-  sectionTitle: {
-    marginBottom: 16,
-  },
-  vehicleCard: {
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
   },
-  vehicleHeader: {
+  sectionTitle: {
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  balance: {
+    textAlign: 'center',
+    color: '#2E7D32',
+    fontWeight: 'bold',
+  },
+  divider: {
+    marginVertical: 12,
+  },
+  vehicleDetails: {
+    gap: 12,
+  },
+  vehicleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  vehicleInfo: {
+  vehicleLabel: {
+    color: '#666',
+  },
+  serviceRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 8,
   },
-  vehicleDetails: {
-    marginLeft: 12,
+  servicePrice: {
+    fontWeight: '600',
   },
-  vehicleSubtext: {
-    color: '#6B7280',
-  },
-  licensePlate: {
-    marginTop: 8,
-    color: '#6B7280',
-  },
-  addButton: {
-    marginTop: 8,
-  },
-  addPaymentButton: {
-    margin: 16,
-  },
-  logoutButton: {
-    margin: 16,
-  },
-  footer: {
-    alignItems: 'center',
+  actions: {
     padding: 16,
+    gap: 12,
   },
-  version: {
-    color: '#6B7280',
+  actionButton: {
+    borderRadius: 8,
   },
 }); 

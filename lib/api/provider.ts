@@ -23,3 +23,7 @@ export const updateExpoToken = async (token: string) =>  {
 export const getActiveRequests = async () => {
   return await axios.get('/provider/active-request');
 }
+
+export const profile= async () => {
+  return await axios.get('/profile');
+}

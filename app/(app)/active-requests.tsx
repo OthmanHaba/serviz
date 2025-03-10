@@ -150,7 +150,10 @@ export default function ActiveRequestsScreen() {
       setIsLoading(false);
       Alert.alert('request completed successfully');
       router.back()
-    }).finally(() => {
+    }).catch(e => {
+      console.error(e);
+    })
+    .finally(() => {
       setIsLoading(false);
     });
 

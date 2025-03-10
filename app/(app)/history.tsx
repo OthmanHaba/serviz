@@ -97,16 +97,27 @@ export default function HistoryScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [sortMenuVisible, setSortMenuVisible] = useState(false);
   const [selectedSort, setSelectedSort] = useState<string>('date_desc');
-  const [historyItems, setHistoryItems] = useState<HistoryItem | null>(null)
+  const [historyItems, setHistoryItems] = useState<HistoryItem | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await history();
+      setHistoryItems(res.data);
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      const res = await history()
-       setHistoryItems(res.data);
-    })();
+    fetchHistory();
+  }, []);
 
-  }, [])
-
- 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchHistory();
+    setRefreshing(false);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -332,6 +343,8 @@ export default function HistoryScreen() {
         renderItem={renderHistoryItem}
         keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.list}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="history" size={64} color="#9CA3AF" />

@@ -1,4 +1,4 @@
-import { View, StyleSheet, FlatList, Image, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, Image, Alert, RefreshControl } from 'react-native';
 import { Text, Card, Button, Chip, useTheme, Portal, Modal } from 'react-native-paper';
 import { useEffect, useState } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -33,16 +33,36 @@ export default function RequestsScreen() {
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [requests, setRequests] = useState<ServiceRequest[] | null>(null)
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    loadRequests();
+  }, []);
+
+  const loadRequests = async () => {
+    try {
+      setLoading(true);
       const res = await getActiveRequests();
-
       setRequests(res.data);
-    })()
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load requests');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  }, [])
-  
+  const refreshHistory = async () => {
+    try {
+      setRefreshing(true);
+      const res = await getActiveRequests();
+      setRequests(res.data);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to refresh requests');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const getServiceIcon = () => {
     return 'car-wrench';
@@ -56,9 +76,18 @@ export default function RequestsScreen() {
     
   };
 
-  const handleDeclineRequest = (request : ServiceRequest) => {
-
-  }
+  const handleDeclineRequest = async (request: ServiceRequest) => {
+    try {
+      const res = await acceptOrDeclineRequset(request.id, 'declined');
+      if (res.status === 201) {
+        // Remove the declined request from the list
+        setRequests((prev) => prev ? prev.filter(r => r.id !== request.id) : null);
+        Alert.alert('Success', 'Request declined successfully');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to decline request');
+    }
+  };
 
   const renderRequestCard = ({ item }: { item: ServiceRequest }) => (
     <Card style={styles.requestCard}>
@@ -219,6 +248,9 @@ export default function RequestsScreen() {
         data={requests}
         renderItem={renderRequestCard}
         keyExtractor={item => item.id.toString()}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={refreshHistory} />
+        }
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
