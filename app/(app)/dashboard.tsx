@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, Platform,SafeAreaView, Alert, Animated, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, SafeAreaView, Alert, Animated, TouchableOpacity } from 'react-native';
 import { Text, Card, Switch, Button, useTheme, List } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -10,6 +10,7 @@ import { usePushNotification } from '@/hooks/usePushNotification';
 import { updateExpoToken } from '@/lib/api/provider';
 import { refreshServiceForUser } from '@/lib/api/service';
 import { useRouter } from 'expo-router';
+import echo from '@/lib/echo';
 type DailyStats = {
   totalEarnings: number;
   completedRequests: number;
@@ -38,6 +39,8 @@ export default function DashboardScreen() {
 
   const router = useRouter();
 
+  const [newNotifications, setNewNotifications] = useState<any[]>([]);
+
   /** Push notificatino
   const {expoPushToken} = usePushNotification();
 
@@ -57,6 +60,27 @@ export default function DashboardScreen() {
 
   }, [expoPushToken]);
    */
+
+  useEffect(() => {
+    // Connect to the Laravel Reverb channel
+    try {
+
+      const channel = echo.channel('new-active-request.' + user?.id);
+
+      // Listen for events on the channel
+      channel.listen('NewActiveRequestHasBeenCreated', (data: any) => {
+        console.log('New notification:', data);
+        setNewNotifications(prev => [...prev, data]);
+      });
+
+      // Cleanup function
+      return () => {
+        echo.leaveChannel('new-active-request.' + user?.id)
+      };
+    } catch (err: any) {
+      console.log('Failed to connect: ' + (err?.message || 'Unknown error'));
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
@@ -132,13 +156,14 @@ export default function DashboardScreen() {
     };
   }, [isOnline]);
 
+
   useEffect(() => {
     const checkActiveRequest = async () => {
       try {
-        
+
         const res = await refreshServiceForUser();
 
-        if(res.status ===200){
+        if (res.status === 200) {
           router.push(`/active-requests?id=${res.data.id}`);
         }
 
@@ -153,7 +178,7 @@ export default function DashboardScreen() {
 
   const toggleOnlineStatus = async () => {
     try {
-  await toggleActiveStatus(!isOnline).then(res => {
+      await toggleActiveStatus(!isOnline).then(res => {
         setIsOnline(res.is_active);
       });
     } catch (error) {
@@ -207,11 +232,14 @@ export default function DashboardScreen() {
           marginRight: 8,
         }} />
         <Text style={{
-          color: '#FFFFFF', 
+          color: '#FFFFFF',
           fontSize: 14,
           fontWeight: '600',
           letterSpacing: 0.3,
-        }}>New Request Available</Text>
+        }}>
+          {newNotifications.length}
+          {newNotifications.length === 1 ? 'new request' : 'new requests'}
+        </Text>
       </Animated.View>
 
       {location ? (
@@ -253,7 +281,7 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[
           styles.toggleButton,
           { backgroundColor: isOnline ? theme.colors.primary : '#6B7280' }

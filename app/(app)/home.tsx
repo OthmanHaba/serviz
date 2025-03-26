@@ -1,23 +1,44 @@
-import { View, StyleSheet, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
-import { Text, Card, Button, useTheme } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Image } from 'react-native';
+import { Text, Card, } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { router, useRouter } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import useServiceStore from '@/stores/serviceStore';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { getActiveRequestData, refreshServiceForUser } from "@/lib/api/service"
 import { updateLocation } from '@/lib/api/provider';
 import { useAuthStore } from '@/stores/authStore';
+import { refreshServiceForUser } from '@/lib/api/service';
+import echo from '@/lib/echo';
+// import useEcho from '@/hooks/useEcho';
 
 export default function HomeScreen() {
-  const theme = useTheme();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { services, fetchServices, setSelectedService } = useServiceStore();
   const { user } = useAuthStore();
   const router = useRouter();
+
+  //channel
+  useEffect(() => {
+    // Connect to the Laravel Reverb channel
+    try {
+
+      const channel = echo.channel('notifications');
+
+      // Listen for events on the channel
+      channel.listen('NewNotification', (data: any) => {
+        console.log('New notification:', data);
+      });
+
+      // Cleanup function
+      return () => {
+        echo.leaveChannel('notifications');
+      };
+    } catch (err: any) {
+      console.log('Failed to connect: ' + (err?.message || 'Unknown error'));
+    }
+  }, []);
+
 
   useEffect(() => {
     (async () => {
@@ -27,7 +48,6 @@ export default function HomeScreen() {
         setErrorMsg('Permission to access location was denied');
         return;
       }
-
 
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location);
@@ -39,16 +59,15 @@ export default function HomeScreen() {
   }, []);
 
 
+
+  // Fallback polling mechanism if Echo is not connected
   useEffect(() => {
     const checkActiveRequest = async () => {
       try {
-
         const res = await refreshServiceForUser();
-
         if (res.status === 200) {
           router.push(`/active-requests?id=${res.data.id}`);
         }
-
       } catch (error) {
         console.error('Error checking active request:', error);
       }
@@ -57,7 +76,6 @@ export default function HomeScreen() {
     const interval = setInterval(checkActiveRequest, 10000);
     return () => clearInterval(interval);
   }, []);
-
 
   const onServiceSelect = (service: any) => {
     setSelectedService(service);
@@ -213,4 +231,4 @@ const styles = StyleSheet.create({
   emergencyButton: {
     borderRadius: 25,
   },
-}); 
+});

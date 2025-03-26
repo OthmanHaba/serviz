@@ -162,7 +162,7 @@ export default function ActiveRequestsScreen() {
   return (
     <View style={styles.container}>
       <MapView
-        provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
+        // provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={{
           latitude: activeRequest.provider?.current_location.latitude || 37.7749,
