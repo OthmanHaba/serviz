@@ -3,7 +3,8 @@ import { getItem } from './asyncStorage';
 
 const api = axios.create({
   // baseURL: 'http://serviz-backend.test/api',
-  baseURL: 'https://53vhfestxu.sharedwithexpose.com/api'
+  baseURL: 'http://102.213.180.120/api'
+  // baseURL: 'http://localhost:8000/api'
 });
 
 api.interceptors.request.use(

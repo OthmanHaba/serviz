@@ -9,8 +9,9 @@ const echo = new Echo({
   broadcaster: 'pusher',
   key: 'my-app-key', // Replace with your Laravel Reverb app key
   cluster: 'mt1', // Adding the required cluster parameter
-  wsHost: 'localhost', // Replace with your Laravel server IP
-  wsPort: 8080, // Default Reverb port
+  wsHost:'102.213.180.120',
+  // wsHost: 'localhost', // Replace with your Laravel server IP
+  wsPort: 9000, // Default Reverb port
   forceTLS: false,
   disableStats: true,
   enabledTransports: ['ws', 'wss'],

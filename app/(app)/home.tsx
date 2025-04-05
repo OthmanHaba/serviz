@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { Text, Card, } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import MapView, { Marker } from 'react-native-maps';
@@ -9,22 +9,25 @@ import { updateLocation } from '@/lib/api/provider';
 import { useAuthStore } from '@/stores/authStore';
 import { refreshServiceForUser } from '@/lib/api/service';
 import echo from '@/lib/echo';
-// import useEcho from '@/hooks/useEcho';
+
 
 export default function HomeScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isChannelConnected, setIsChannelConnected] = useState(false);
   const { services, fetchServices, setSelectedService } = useServiceStore();
   const { user } = useAuthStore();
   const router = useRouter();
 
-  //channel
   useEffect(() => {
     // Connect to the Laravel Reverb channel
     try {
 
-      const channel = echo.channel('notifications');
 
+      if (echo.connector.pusher.connection.state == 'connected') {
+        setIsChannelConnected(true);
+      }
+      const channel = echo.channel('notifications');
       // Listen for events on the channel
       channel.listen('NewNotification', (data: any) => {
         console.log('New notification:', data);
@@ -33,12 +36,13 @@ export default function HomeScreen() {
       // Cleanup function
       return () => {
         echo.leaveChannel('notifications');
+        setIsChannelConnected(false);
       };
     } catch (err: any) {
       console.log('Failed to connect: ' + (err?.message || 'Unknown error'));
+      setIsChannelConnected(false);
     }
   }, []);
-
 
   useEffect(() => {
     (async () => {
@@ -57,8 +61,6 @@ export default function HomeScreen() {
       );
     })();
   }, []);
-
-
 
   // Fallback polling mechanism if Echo is not connected
   useEffect(() => {
@@ -91,56 +93,60 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      {location ? (
-        <MapView
-          style={styles.map}
-          initialRegion={{
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          }}
-        >
-          <View style={{
-            position: 'absolute',
-            top: 60,
-            left: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            borderRadius: 25,
-            padding: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: {
-              width: 0,
-              height: 2,
-            },
-            shadowOpacity: 0.25,
-            shadowRadius: 3.84,
-            elevation: 5,
-          }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: 'bold',
-              color: '#1006F3'
-            }}>
-              wallet: ${user?.wallet.balance.toFixed(2)}
-            </Text>
-          </View>
-          <Marker
-            coordinate={{
+      {/* Loading Overlay */}
+      {!isChannelConnected ? (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#1006F3" />
+          <Text style={styles.loadingText}>Connecting to notifications...</Text>
+        </View>
+      ) : null}
+
+      {/* Map Container */}
+      <View style={styles.mapContainer}>
+        {location ? (
+          <MapView
+            style={styles.map}
+            initialRegion={{
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
             }}
-            title="Your Location"
-          />
-        </MapView>
-      ) : (
-        <View style={styles.mapPlaceholder}>
-          <Text>{errorMsg || 'Loading map...'}</Text>
-        </View>
-      )}
+          >
+            <View style={{
+              position: 'absolute',
+              top: 60,
+              left: 20,
+              backgroundColor: 'rgba(200, 255, 255, 0.5)',
+              borderRadius: 10,
+              padding: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '500',
+                color: '#1006F3'
+              }}>
+                wallet: ${user?.wallet?.balance ?? '0'}
+              </Text>
+            </View>
+            <Marker
+              coordinate={{
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+              }}
+              title="Your Location"
+            />
+          </MapView>
+        ) : (
+          <View style={styles.mapPlaceholder}>
+            <Text>{errorMsg || 'Loading map...'}</Text>
+          </View>
+        )}
+      </View>
 
+      {/* Services ScrollView */}
       <ScrollView
         style={styles.servicesContainer}
         contentContainerStyle={styles.servicesContent}
@@ -183,6 +189,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    position: 'relative',
+  },
+  mapContainer: {
     flex: 1,
   },
   map: {
@@ -230,5 +240,21 @@ const styles = StyleSheet.create({
   },
   emergencyButton: {
     borderRadius: 25,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#1006F3',
   },
 });

@@ -19,7 +19,7 @@ type Profile = {
   remember_token: string;
   email_verified_at: string;
   phone: string;
-  vehicle_info:object;
+  vehicle_info: object;
   role: string;
   is_active: boolean;
   created_at: string;
@@ -71,10 +71,10 @@ export default function ProfileScreen() {
   if (error || !userProfile) {
     return (
       <View style={styles.errorContainer}>
-        <MaterialCommunityIcons 
-          name="alert-circle-outline" 
-          size={48} 
-          color={theme.colors.error} 
+        <MaterialCommunityIcons
+          name="alert-circle-outline"
+          size={48}
+          color={theme.colors.error}
         />
         <Text style={styles.errorText}>{error}</Text>
         <Button mode="contained" onPress={loadProfile}>
@@ -123,7 +123,7 @@ export default function ProfileScreen() {
             <Text variant="titleMedium" style={styles.sectionTitle}>Wallet Balance</Text>
           </View>
           <Text variant="displaySmall" style={styles.balance}>
-            ${userProfile.wallet.balance.toFixed(2)}
+            ${userProfile?.wallet?.balance ?? '0'}
           </Text>
         </Surface>
 
@@ -142,18 +142,27 @@ export default function ProfileScreen() {
                 <Text variant="bodyLarge">{value as string}</Text>
               </View>
             ))}
-            
+
           </View>
         </Surface>
 
         {userProfile.provider_services?.length > 0 && (
           <Surface style={styles.section} elevation={1}>
-            <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="tools" size={24} color={theme.colors.primary} />
-              <Text variant="titleMedium" style={styles.sectionTitle}>Services Offered</Text>
+            <View style={{...styles.sectionHeader,justifyContent:'space-between'}}>
+              <View style={styles.sectionHeader}>
+                <MaterialCommunityIcons name="tools" size={24} color={theme.colors.primary} />
+                <Text variant="titleMedium" style={styles.sectionTitle}>Services Offered</Text>
+              </View>
+              <Button
+                mode="contained"
+                onPress={() => {/* TODO: Implement add or remove service */ }}
+                style={styles.actionButton}
+              >
+                <MaterialCommunityIcons name="plus" size={24} color={'white'} />
+              </Button>
             </View>
             <Divider style={styles.divider} />
-            {userProfile.provider_services.map((service, index) => (
+            {userProfile.provider_services?.map((service, index) => (
               <View key={index} style={styles.serviceRow}>
                 <Text variant="bodyMedium">Service #{service.service}</Text>
                 <Text variant="bodyLarge" style={styles.servicePrice}>
@@ -168,7 +177,7 @@ export default function ProfileScreen() {
           <Button
             mode="contained"
             icon="account-edit"
-            onPress={() => {/* TODO: Implement edit profile */}}
+            onPress={() => {/* TODO: Implement edit profile */ }}
             style={styles.actionButton}
           >
             Edit Profile
@@ -296,4 +305,10 @@ const styles = StyleSheet.create({
   actionButton: {
     borderRadius: 8,
   },
+  smallActitionButton: {
+    padding: 0,
+    borderRadius: 4,
+    backgroundColor: '#6200ee',
+    alignItems: 'center',
+  }
 }); 

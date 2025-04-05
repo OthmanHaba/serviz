@@ -1,12 +1,13 @@
-import { View, StyleSheet, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Text, Card, Button, Avatar, IconButton } from 'react-native-paper';
 import { useState, useEffect } from 'react';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getActiveRequestData } from "@/lib/api/service"
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import { completeActiveRequest } from '@/lib/api/request';
+import { ServiceRequest } from '@/app/types/request';
 
 /** types
  * 
@@ -44,24 +45,36 @@ type ServiceRequest = {
  */
 
 export default function ActiveRequestsScreen() {
-  const [activeRequest, setActiveRequest] = useState(null);
+  const [activeRequest, setActiveRequest] = useState<ServiceRequest | null>(null);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  useEffect(() => {
-    (async () => {
-      const res = await getActiveRequestData(Number(params.id));
-      console.log(res.data);
-      setActiveRequest(res.data);
-    })();
-  }, [])
-
+  const [mapReady, setMapReady] = useState(false);
   const params = useLocalSearchParams();
   const { user } = useAuthStore();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const requestId = typeof params.id === 'string' ? parseInt(params.id, 10) : Number(params.id);
+        const res = await getActiveRequestData(requestId);
+        console.log(res.data);
+        setActiveRequest(res.data);
+      } catch (error) {
+        console.error('Error fetching request data:', error);
+      }
+    })();
+  }, [params.id]);
+
   useEffect(() => {
     const statusUpdateInterval = setInterval(async () => {
-      const res = await getActiveRequestData(Number(params.id));
-      console.log(res.data);
-      setActiveRequest(res.data);
+      try {
+        const requestId = typeof params.id === 'string' ? parseInt(params.id, 10) : Number(params.id);
+        const res = await getActiveRequestData(requestId);
+        console.log(res.data);
+        setActiveRequest(res.data);
+      } catch (error) {
+        console.error('Error updating request data:', error);
+      }
     }, 10000);
 
     return () => {
@@ -70,6 +83,8 @@ export default function ActiveRequestsScreen() {
   }, [params.id]);
 
   const getStatusColor = () => {
+    if (!activeRequest) return '#6B7280';
+
     switch (activeRequest.status) {
       case 'PendingUserApproved':
         return '#FCD34D';
@@ -85,6 +100,8 @@ export default function ActiveRequestsScreen() {
   };
 
   const getStatusText = () => {
+    if (!activeRequest) return 'Loading...';
+
     switch (activeRequest.status) {
       case 'PendingUserApproved':
         return 'Waiting for your approval...';
@@ -100,7 +117,7 @@ export default function ActiveRequestsScreen() {
   };
 
   const renderProviderCard = () => {
-    if (!activeRequest.provider) return null;
+    if (!activeRequest || !activeRequest.provider) return null;
 
     return (
       <Card style={styles.providerCard}>
@@ -143,48 +160,45 @@ export default function ActiveRequestsScreen() {
   }
 
   const handleComplete = async () => {
-    
+    if (!activeRequest) return;
+
     setIsLoading(true);
 
-    await completeActiveRequest(activeRequest.id).then(res => {
+    try {
+      await completeActiveRequest(activeRequest.id);
       setIsLoading(false);
       Alert.alert('request completed successfully');
-      router.back()
-    }).catch(e => {
+      router.back();
+    } catch (e) {
       console.error(e);
-    })
-    .finally(() => {
       setIsLoading(false);
-    });
-
+    }
   }
 
   return (
     <View style={styles.container}>
       <MapView
-        // provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={{
-          latitude: activeRequest.provider?.current_location.latitude || 37.7749,
-          longitude: activeRequest.provider?.current_location.longitude || -122.4194,
+          latitude: activeRequest?.provider?.current_location?.latitude ?? 0,
+          longitude: activeRequest?.provider?.current_location?.longitude ?? 0,
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
         }}
+        onMapReady={() => setMapReady(true)}
       >
-        {activeRequest?.provider && (
+        {mapReady && activeRequest?.provider?.current_location && (
           <Marker
-            key={activeRequest.provider.id}
             coordinate={activeRequest.provider.current_location}
             title={activeRequest.provider.name}
           >
             <MaterialCommunityIcons name="car-connected" size={32} color={'red'} />
           </Marker>
         )}
-        {activeRequest?.user?.current_location && (
+        {mapReady && activeRequest?.user?.current_location && (
           <Marker
-            key={activeRequest.user.id}
             coordinate={activeRequest.user.current_location}
-            title={activeRequest.user.name}
+            title={activeRequest.user.name || "User"}
           >
             <MaterialCommunityIcons name="account" size={32} color="#FF5733" />
           </Marker>
@@ -192,14 +206,14 @@ export default function ActiveRequestsScreen() {
       </MapView>
 
       <View style={styles.content}>
-        {(user.role === 'provider') && 
-        <View style={styles.statusCard}>
-          <View>
-            <Button mode="contained" onPress={() => handleComplete()} style={{ marginTop: 10 }}>
-              Complete
-            </Button>
+        {user?.role === 'provider' &&
+          <View style={styles.statusCard}>
+            <View>
+              <Button mode="contained" onPress={() => handleComplete()} style={{ marginTop: 10 }} loading={isLoading} disabled={isLoading}>
+                Complete
+              </Button>
+            </View>
           </View>
-        </View>
         }
         <Card style={styles.statusCard}>
           <Card.Content>
@@ -219,20 +233,20 @@ export default function ActiveRequestsScreen() {
 
 
         {renderProviderCard()}
-      {isLoading && (
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <ActivityIndicator size="large" color="#ffffff" />
-        </View>
-      )}
+        {isLoading && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+            <ActivityIndicator size="large" color="#ffffff" />
+          </View>
+        )}
       </View>
     </View>
   );
