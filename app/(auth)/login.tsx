@@ -19,17 +19,23 @@ export default function Login() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { setUser, setToken } = useAuthStore();
-  const [error , setError]= useState<{
-    message:string,
+  const [error, setError] = useState<{
+    message: string,
   } | null>(null);
 
+  const testOnSubmit = async (type: string) => {
+    await onSubmit({
+      email: 'user@' + type + '.com',
+      password: 'password'
+    })
+  }
 
   const onSubmit = async (data: LoginForm) => {
     try {
       setIsLoading(true);
       const response = await login(data);
-      if(response.status === 200) {
-        if(response.data.user.role === 'provider') {
+      if (response.status === 200) {
+        if (response.data.user.role === 'provider') {
           setUser(response.data.user);
           setToken(response.data.token);
           router.push('/(app)/dashboard');
@@ -42,10 +48,10 @@ export default function Login() {
         console.log(response.data.message)
         Alert.alert('Error', response.data.message);
       }
-    } catch (_error) {
-      if(_error.status == 401){
+    } catch (_error: any) {
+      if (_error.status == 401) {
         setError({
-          "message" : "Invalid credentials"
+          "message": "Invalid credentials"
         });
       }
       console.log(error);
@@ -57,7 +63,7 @@ export default function Login() {
   return (
     <View style={styles.container}>
       <Text variant="headlineMedium" style={styles.title}>Welcome Back</Text>
-      
+
       <Controller
         control={control}
         name="email"
@@ -93,7 +99,7 @@ export default function Login() {
 
       {error && (
         <View>
-          <Text style={{color: 'red'}}>{error.message}</Text>
+          <Text style={{ color: 'red' }}>{error.message}</Text>
         </View>
 
       )}
@@ -106,6 +112,23 @@ export default function Login() {
       >
         Login
       </Button>
+
+      <View style={styles.testButtonsContainer}>
+        <Button
+          mode="outlined"
+          onPress={() => testOnSubmit('user')}
+          style={styles.testButton}
+        >
+          Test User Login
+        </Button>
+        <Button
+          mode="outlined"
+          onPress={() => testOnSubmit('provider')}
+          style={styles.testButton}
+        >
+          Test Provider Login
+        </Button>
+      </View>
 
       <Link href="/register" asChild>
         <Button mode="text">Don't have an account? Register</Button>
@@ -174,5 +197,14 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     fontSize: 16,
     fontWeight: '500',
+  },
+  testButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  testButton: {
+    flex: 1,
   },
 }); 

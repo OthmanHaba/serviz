@@ -187,21 +187,25 @@ export default function ActiveRequestsScreen() {
         }}
         onMapReady={() => setMapReady(true)}
       >
-        {mapReady && activeRequest?.provider?.current_location && (
-          <Marker
-            coordinate={activeRequest.provider.current_location}
-            title={activeRequest.provider.name}
-          >
-            <MaterialCommunityIcons name="car-connected" size={32} color={'red'} />
-          </Marker>
-        )}
-        {mapReady && activeRequest?.user?.current_location && (
-          <Marker
-            coordinate={activeRequest.user.current_location}
-            title={activeRequest.user.name || "User"}
-          >
-            <MaterialCommunityIcons name="account" size={32} color="#FF5733" />
-          </Marker>
+        {mapReady && (
+          <View>
+            {activeRequest?.provider?.current_location && (
+              <Marker
+                coordinate={activeRequest.provider.current_location}
+                title={activeRequest.provider.name}
+              >
+                <MaterialCommunityIcons name="car-connected" size={32} color={'red'} />
+              </Marker>
+            )}
+            {activeRequest?.user?.current_location && (
+              <Marker
+                coordinate={activeRequest.user.current_location}
+                title={activeRequest.user.name || "User"}
+              >
+                <MaterialCommunityIcons name="account" size={32} color="#FF5733" />
+              </Marker>
+            )}
+          </View>
         )}
       </MapView>
 

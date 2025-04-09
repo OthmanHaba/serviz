@@ -1,7 +1,7 @@
-import { View, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, ActivityIndicator, Platform } from 'react-native';
 import { Text, Card, } from 'react-native-paper';
-import { useState, useEffect } from 'react';
-import MapView, { Marker } from 'react-native-maps';
+import { useState, useEffect, useRef } from 'react';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import useServiceStore from '@/stores/serviceStore';
@@ -9,6 +9,7 @@ import { updateLocation } from '@/lib/api/provider';
 import { useAuthStore } from '@/stores/authStore';
 import { refreshServiceForUser } from '@/lib/api/service';
 import echo from '@/lib/echo';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 
 export default function HomeScreen() {
@@ -18,6 +19,8 @@ export default function HomeScreen() {
   const { services, fetchServices, setSelectedService } = useServiceStore();
   const { user } = useAuthStore();
   const router = useRouter();
+  const mapRef = useRef<MapView | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     // Connect to the Laravel Reverb channel
@@ -102,18 +105,40 @@ export default function HomeScreen() {
       ) : null}
 
       {/* Map Container */}
-      <View style={styles.mapContainer}>
-        {location ? (
+      <View
+        style={styles.mapContainer}
+        onLayout={() => {
+          // Force re-render after layout to ensure proper initialization on Android
+          if (Platform.OS === 'android') {
+            setTimeout(() => setMapReady(true), 100);
+          } else {
+            setMapReady(true);
+          }
+        }}
+      >
+        {location && mapReady ? (
           <MapView
+            key={'map-home-view'}
+            ref={mapRef}
             style={styles.map}
+            provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
             initialRegion={{
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
               latitudeDelta: 0.0922,
               longitudeDelta: 0.0421,
             }}
+            region={{
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+            toolbarEnabled={false}
+            loadingEnabled={true}
+            loadingIndicatorColor="#1006F3"
           >
-            <View style={{
+            {/* <View style={{
               position: 'absolute',
               top: 60,
               left: 20,
@@ -130,14 +155,24 @@ export default function HomeScreen() {
               }}>
                 wallet: ${user?.wallet?.balance ?? '0'}
               </Text>
-            </View>
+              
+            </View> */}
             <Marker
-              coordinate={{
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-              }}
-              title="Your Location"
-            />
+                coordinate={{
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                }}
+                title="Your Location"
+              >
+                <View style={[styles.markerContainer]}>
+                  <MaterialCommunityIcons
+                    name="account-circle"
+                    size={24}
+                    color="white"
+                  />
+                </View>
+              </Marker>
+
           </MapView>
         ) : (
           <View style={styles.mapPlaceholder}>
@@ -256,5 +291,22 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#1006F3',
+  },
+  markerContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
