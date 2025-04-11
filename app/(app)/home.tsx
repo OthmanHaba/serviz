@@ -138,25 +138,6 @@ export default function HomeScreen() {
             loadingEnabled={true}
             loadingIndicatorColor="#1006F3"
           >
-            {/* <View style={{
-              position: 'absolute',
-              top: 60,
-              left: 20,
-              backgroundColor: 'rgba(200, 255, 255, 0.5)',
-              borderRadius: 10,
-              padding: 8,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}>
-              <Text style={{
-                fontSize: 16,
-                fontWeight: '500',
-                color: '#1006F3'
-              }}>
-                wallet: ${user?.wallet?.balance ?? '0'}
-              </Text>
-              
-            </View> */}
             <Marker
                 coordinate={{
                   latitude: location.coords.latitude,

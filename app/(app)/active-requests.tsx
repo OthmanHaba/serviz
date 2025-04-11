@@ -1,85 +1,64 @@
-import { View, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Text, Card, Button, Avatar, IconButton } from 'react-native-paper';
-import { useState, useEffect } from 'react';
-import MapView, { Marker } from 'react-native-maps';
+import { useState, useEffect, useRef } from 'react';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getActiveRequestData } from "@/lib/api/service"
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import { completeActiveRequest } from '@/lib/api/request';
 import { ServiceRequest } from '@/app/types/request';
-
-/** types
- * 
- * @returns 
- * type Provider = {
-  id: string;
-  name: string;
-  rating: number;
-  phone: string;
-  current_location: {
-    latitude: number;
-    longitude: number;
-  };
-};
-
-type User = {
-  id:string;
-  name:string;
-  current_location: {
-    latitude: number;
-    longitude: number;
-  };
-}
-
-type ServiceRequest = {
-  id: string;
-  status: 'pending' | 'accepted' | 'en_route' | 'arrived' | 'in_progress' | 'completed';
-  serviceType: string;
-  provider?: Provider;
-  user:User;
-  createdAt: string;
-  estimatedArrival?: string;
-};
-
- */
+import * as Location from 'expo-location';
+import { getDistance } from 'geolib';
 
 export default function ActiveRequestsScreen() {
   const [activeRequest, setActiveRequest] = useState<ServiceRequest | null>(null);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [providerLocation, setProviderLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [userLocation, setUserLocation] = useState<Location.LocationObjectCoords | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const params = useLocalSearchParams();
   const { user } = useAuthStore();
+  const mapRef = useRef<MapView | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const requestId = typeof params.id === 'string' ? parseInt(params.id, 10) : Number(params.id);
         const res = await getActiveRequestData(requestId);
-        console.log(res.data);
         setActiveRequest(res.data);
+        setLocation(await Location.getCurrentPositionAsync());
+        if (user?.role === 'provider') {
+          setProviderLocation({
+            latitude: Number(res.data.provider.current_location.latitude),
+            longitude: Number(res.data.provider.current_location.longitude),
+            altitude: 0,
+            accuracy: 0,
+            altitudeAccuracy: 0,
+            heading: 0,
+            speed: 0
+          });
+        } else {
+          setUserLocation({
+            latitude: Number(res.data.user.current_location.latitude),
+            longitude: Number(res.data.user.current_location.longitude),
+            altitude: 0,
+            accuracy: 0,
+            altitudeAccuracy: 0,
+            heading: 0,
+            speed: 0
+          });
+        }
       } catch (error) {
         console.error('Error fetching request data:', error);
+        setMapError('Failed to load request data');
+        setErrorMsg(error instanceof Error ? error.message : 'An unknown error occurred');
       }
     })();
-  }, [params.id]);
-
-  useEffect(() => {
-    const statusUpdateInterval = setInterval(async () => {
-      try {
-        const requestId = typeof params.id === 'string' ? parseInt(params.id, 10) : Number(params.id);
-        const res = await getActiveRequestData(requestId);
-        console.log(res.data);
-        setActiveRequest(res.data);
-      } catch (error) {
-        console.error('Error updating request data:', error);
-      }
-    }, 10000);
-
-    return () => {
-      clearInterval(statusUpdateInterval);
-    };
   }, [params.id]);
 
   const getStatusColor = () => {
@@ -154,7 +133,10 @@ export default function ActiveRequestsScreen() {
     return (
       <View style={styles.emptyContainer}>
         <MaterialCommunityIcons name="clipboard-text" size={64} color="#9CA3AF" />
-        <Text variant="titleLarge" style={styles.emptyText}>No Active Requests</Text>
+        <View style={styles.emptyText}>
+          <ActivityIndicator size="large" color="#1006F3" />
+          <Text style={{ marginTop: 16, color: '#6B7280', textAlign: 'center' }}>Loading request details...</Text>
+        </View>
       </View>
     );
   }
@@ -175,39 +157,109 @@ export default function ActiveRequestsScreen() {
     }
   }
 
+  const isWithinRadius = (point1: Location.LocationObjectCoords, point2: Location.LocationObjectCoords) => {
+    const distance = getDistance(
+      { latitude: point1.latitude, longitude: point1.longitude },
+      { latitude: point2.latitude, longitude: point2.longitude }
+    );
+    return distance <= 2000; // 2km in meters
+  };
+
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: activeRequest?.provider?.current_location?.latitude ?? 0,
-          longitude: activeRequest?.provider?.current_location?.longitude ?? 0,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
+      {/* Map Container */}
+      <View
+        style={styles.mapContainer}
+        onLayout={() => {
+          // Force re-render after layout to ensure proper initialization on Android
+          if (Platform.OS === 'android') {
+            setTimeout(() => setMapReady(true), 100);
+          } else {
+            setMapReady(true);
+          }
         }}
-        onMapReady={() => setMapReady(true)}
       >
-        {mapReady && (
-          <View>
-            {activeRequest?.provider?.current_location && (
+        {location && mapReady ? (
+          <MapView
+            ref={mapRef}
+            key={'map-active-request'}
+            style={styles.map}
+            provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
+            initialRegion={{
+              latitude: location?.coords.latitude ?? 12,
+              longitude: location?.coords.longitude ?? 12,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+            region={{
+              latitude: location?.coords.latitude ?? 12,
+              longitude: location?.coords.longitude ?? 12,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+            toolbarEnabled={false}
+            loadingEnabled={true}
+            loadingIndicatorColor="#1006F3"
+          >
+            {user?.role === 'provider' && providerLocation && location && isWithinRadius(location.coords, providerLocation) && (
               <Marker
-                coordinate={activeRequest.provider.current_location}
+                coordinate={{
+                  latitude: providerLocation.latitude,
+                  longitude: providerLocation.longitude
+                }}
                 title={activeRequest.provider.name}
               >
-                <MaterialCommunityIcons name="car-connected" size={32} color={'red'} />
+                <View style={[styles.markerContainer]}>
+                  <MaterialCommunityIcons
+                    name="car-connected"
+                    size={32}
+                    color="red"
+                  />
+                </View>
               </Marker>
             )}
-            {activeRequest?.user?.current_location && (
+            {user?.role === 'user' && userLocation && location && isWithinRadius(location.coords, userLocation) && (
               <Marker
-                coordinate={activeRequest.user.current_location}
+                coordinate={{
+                  latitude: userLocation.latitude,
+                  longitude: userLocation.longitude
+                }}
                 title={activeRequest.user.name || "User"}
               >
-                <MaterialCommunityIcons name="account" size={32} color="#FF5733" />
+                <View style={[styles.markerContainer]}>
+                  <MaterialCommunityIcons
+                    name="account"
+                    size={32}
+                    color="#FF5733"
+                  />
+                </View>
               </Marker>
             )}
+
+            <Marker
+              coordinate={{
+                latitude: location?.coords.latitude ?? 12,
+                longitude: location?.coords.longitude ?? 12
+              }}
+              title={activeRequest.user.name || "User"}
+            >
+              <View style={[styles.markerContainer]}>
+                <MaterialCommunityIcons
+                  name="account"
+                  size={32}
+                  color="#FF5733"
+                />
+              </View>
+            </Marker>
+
+          </MapView>
+        ) : (
+          <View style={styles.mapPlaceholder}>
+            <ActivityIndicator size="large" color="#1006F3" />
+            <Text>{mapError || 'Loading map...'}</Text>
           </View>
         )}
-      </MapView>
+      </View>
 
       <View style={styles.content}>
         {user?.role === 'provider' &&
@@ -237,6 +289,7 @@ export default function ActiveRequestsScreen() {
 
 
         {renderProviderCard()}
+
         {isLoading && (
           <View style={{
             position: 'absolute',
@@ -259,9 +312,19 @@ export default function ActiveRequestsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
+  },
+  mapContainer: {
+    flex: 1,
   },
   map: {
     flex: 1,
+  },
+  mapPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   content: {
     position: 'absolute',
@@ -270,6 +333,23 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: 'transparent',
     padding: 20,
+  },
+  markerContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   statusCard: {
     marginBottom: 10,
