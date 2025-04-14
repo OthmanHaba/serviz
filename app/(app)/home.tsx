@@ -139,20 +139,20 @@ export default function HomeScreen() {
             loadingIndicatorColor="#1006F3"
           >
             <Marker
-                coordinate={{
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                }}
-                title="Your Location"
-              >
-                <View style={[styles.markerContainer]}>
-                  <MaterialCommunityIcons
-                    name="account-circle"
-                    size={24}
-                    color="white"
-                  />
-                </View>
-              </Marker>
+              coordinate={{
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+              }}
+              title="Your Location"
+            >
+              <View style={[styles.markerContainer]}>
+                <MaterialCommunityIcons
+                  name="account-circle"
+                  size={24}
+                  color="white"
+                />
+              </View>
+            </Marker>
 
           </MapView>
         ) : (

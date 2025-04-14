@@ -95,6 +95,30 @@ export default function ActiveRequestsScreen() {
     }
   };
 
+
+  const renderUserCard = () => {
+    if (!activeRequest || !activeRequest.user) return null;
+
+    return (
+      <Card style={styles.userCard}>
+        <Card.Content style={styles.userContent}>
+          <View style={styles.userInfo}>
+            <Avatar.Text
+              size={50}
+              label={activeRequest.user.name
+                .split(' ')
+                .map(n => n[0])
+                .join('')}
+            />  
+          </View>
+          <View style={styles.userDetails}>
+            <Text variant="titleMedium">{activeRequest.user.name}</Text>
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
+
   const renderProviderCard = () => {
     if (!activeRequest || !activeRequest.provider) return null;
 
@@ -150,7 +174,7 @@ export default function ActiveRequestsScreen() {
       await completeActiveRequest(activeRequest.id);
       setIsLoading(false);
       Alert.alert('request completed successfully');
-      router.back();
+      router.push('/(app)/dashboard');
     } catch (e) {
       console.error(e);
       setIsLoading(false);
@@ -288,8 +312,8 @@ export default function ActiveRequestsScreen() {
         </Card>
 
 
-        {renderProviderCard()}
-
+        {user?.role === 'provider' && renderUserCard()}
+        {user?.role === 'user' && renderProviderCard()}
         {isLoading && (
           <View style={{
             position: 'absolute',
@@ -442,5 +466,18 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: '#fff',
+  },
+  userCard: {
+    marginBottom: 10,
+  },
+  userContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userInfo: {
+    marginRight: 12,
+  },
+  userDetails: {
+    flex: 1,
   },
 }); 
