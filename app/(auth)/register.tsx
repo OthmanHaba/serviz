@@ -7,6 +7,36 @@ import { useEffect, useState } from 'react';
 import useServiceStore from '@/stores/serviceStore';
 import { RegisterService } from '@/lib/services/register';
 import { MaterialIcons } from '@expo/vector-icons';
+
+// Arabic translations
+const translations = {
+  title: 'إنشاء حساب',
+  steps: {
+    back: 'رجوع',
+    next: 'التالي',
+    register: 'تسجيل',
+  },
+  fields: {
+    name: 'الاسم',
+    email: 'البريد الإلكتروني',
+    phone: 'رقم الهاتف',
+    password: 'كلمة المرور',
+    vehicleType: 'نوع المركبة',
+    vehicleModel: 'موديل المركبة',
+    vehicleYear: 'سنة المركبة',
+    role: {
+      user: 'مستخدم',
+      provider: 'مزود خدمة'
+    }
+  },
+  service: {
+    enterPrice: 'أدخل السعر',
+    add: 'إضافة',
+    remove: 'إزالة'
+  },
+  login: 'لديك حساب بالفعل؟ تسجيل الدخول'
+};
+
 type Service = {
   id: number;
   name: string;
@@ -84,11 +114,12 @@ export default function Register() {
               rules={{ required: true }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
-                  label="Name"
+                  label={translations.fields.name}
                   value={value}
                   onChangeText={onChange}
                   error={!!error}
                   style={styles.input}
+                  textAlign="right"
                 />
               )}
             />
@@ -98,13 +129,14 @@ export default function Register() {
               rules={{ required: true }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
-                  label="Email"
+                  label={translations.fields.email}
                   value={value}
                   onChangeText={onChange}
                   error={!!error}
                   style={styles.input}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  textAlign="right"
                 />
               )}
             />
@@ -114,12 +146,13 @@ export default function Register() {
               rules={{ required: true }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
-                  label="Phone Number"
+                  label={translations.fields.phone}
                   value={value}
                   onChangeText={onChange}
                   error={!!error}
                   style={styles.input}
                   keyboardType="phone-pad"
+                  textAlign="right"
                 />
               )}
             />
@@ -132,13 +165,11 @@ export default function Register() {
                   onValueChange={onChange}
                   value={value}
                 >
-                  <RadioButton.Item label="User" value="user" />
-                  <RadioButton.Item label="Provider" value="provider" />
+                  <RadioButton.Item label={translations.fields.role.user} value="user" />
+                  <RadioButton.Item label={translations.fields.role.provider} value="provider" />
                 </RadioButton.Group>
-
               )}
             />
-
           </>
         );
       case 2:
@@ -149,12 +180,13 @@ export default function Register() {
             rules={{ required: true }}
             render={({ field: { onChange, value }, fieldState: { error } }) => (
               <TextInput
-                label="Password"
+                label={translations.fields.password}
                 value={value}
                 onChangeText={onChange}
                 error={!!error}
                 secureTextEntry
                 style={styles.input}
+                textAlign="right"
               />
             )}
           />
@@ -168,11 +200,12 @@ export default function Register() {
               rules={{ required: true }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
-                  label="Vehicle Type"
+                  label={translations.fields.vehicleType}
                   value={value}
                   onChangeText={onChange}
                   error={!!error}
                   style={styles.input}
+                  textAlign="right"
                 />
               )}
             />
@@ -182,11 +215,12 @@ export default function Register() {
               rules={{ required: true }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
-                  label="Vehicle Model"
+                  label={translations.fields.vehicleModel}
                   value={value}
                   onChangeText={onChange}
                   error={!!error}
                   style={styles.input}
+                  textAlign="right"
                 />
               )}
             />
@@ -196,12 +230,13 @@ export default function Register() {
               rules={{ required: true }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
-                  label="Vehicle Year"
+                  label={translations.fields.vehicleYear}
                   value={value}
                   onChangeText={onChange}
                   error={!!error}
                   style={styles.input}
                   keyboardType="numeric"
+                  textAlign="right"
                 />
               )}
             />
@@ -231,12 +266,13 @@ export default function Register() {
                             fontSize: 16,
                             fontWeight: '600',
                             color: '#2c3e50',
-                            marginBottom: 4
+                            marginBottom: 4,
+                            textAlign: 'right'
                           }}>
                             {service.name}
                           </Text>
                           <TextInput
-                            placeholder="Enter price"
+                            placeholder={translations.service.enterPrice}
                             value={servicePrices[service.id] || ''}
                             onChangeText={(text) => setServicePrices(prev => ({ ...prev, [service.id]: text }))}
                             keyboardType="numeric"
@@ -245,7 +281,8 @@ export default function Register() {
                               backgroundColor: '#f7f9fc',
                               borderRadius: 8,
                               paddingHorizontal: 8,
-                              fontSize: 14
+                              fontSize: 14,
+                              textAlign: 'right'
                             }}
                           />
                         </View>
@@ -272,7 +309,7 @@ export default function Register() {
                             fontSize: 14,
                             fontWeight: '500'
                           }}>
-                            {isAdded ? <MaterialIcons name="remove" size={24} color={isAdded ? '#dc2626' : '#16a34a'} /> : <MaterialIcons name="add" size={24} color={isAdded ? '#dc2626' : '#16a34a'} />}
+                            {isAdded ? translations.service.remove : translations.service.add}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -281,7 +318,6 @@ export default function Register() {
                 />
               </View>
             )}
-
           </>
         );
       default:
@@ -290,8 +326,8 @@ export default function Register() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text variant="headlineMedium" style={styles.title}>Create Account</Text>
+    <SafeAreaView style={[styles.container, { direction: 'rtl' }]}>
+      <Text variant="headlineMedium" style={styles.title}>{translations.title}</Text>
 
       <ProgressBar progress={step / totalSteps} style={styles.progress} />
 
@@ -304,7 +340,7 @@ export default function Register() {
             onPress={() => setStep(step - 1)}
             style={styles.button}
           >
-            Back
+            {translations.steps.back}
           </Button>
         )}
 
@@ -314,7 +350,7 @@ export default function Register() {
             onPress={() => setStep(step + 1)}
             style={styles.button}
           >
-            Next
+            {translations.steps.next}
           </Button>
         ) : (
           <Button
@@ -322,13 +358,13 @@ export default function Register() {
             onPress={handleSubmit(onSubmit)}
             style={styles.button}
           >
-            Register
+            {translations.steps.register}
           </Button>
         )}
       </View>
 
       <Link href="/login" asChild>
-        <Button mode="text">Already have an account? Login</Button>
+        <Button mode="text">{translations.login}</Button>
       </Link>
     </SafeAreaView>
   );

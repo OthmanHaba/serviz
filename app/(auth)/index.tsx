@@ -1,28 +1,34 @@
-import { View, StyleSheet, useWindowDimensions, ScrollView } from 'react-native';
+import { View, StyleSheet, useWindowDimensions, ScrollView, I18nManager } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { useState, useRef } from 'react';
 import { router } from 'expo-router';
 import Animated, { 
   useAnimatedScrollHandler,
   useSharedValue,
-  useAnimatedStyle,
-  interpolate,
 } from 'react-native-reanimated';
 
-const slides = [
-  {
-    title: 'Welcome to Serviz',
-    description: 'Your roadside assistance companion, available 24/7.',
-  },
-  {
-    title: 'Quick & Reliable',
-    description: 'Get connected with nearby service providers in minutes.',
-  },
-  {
-    title: 'Choose Your Role',
-    description: 'Are you looking for assistance or providing services?',
-  },
-];
+// Arabic translations
+const translations = {
+  slides: [
+    {
+      title: 'طريقك الآمن',
+      subtitle: 'مساعدتك على الطريق',
+      description: 'احصل على مساعدة على الطريق بكل سهولة. بسط تجربة القيادة الخاصة بك.',
+    },
+    {
+      title: 'اختر دورك',
+      subtitle: 'مستخدم أو مزود خدمة',
+      description: 'حدد ما إذا كنت بحاجة إلى مساعدة أو ترغب في تقديم الخدمات.',
+    },
+  ],
+  buttons: {
+    needAssistance: 'أحتاج إلى مساعدة',
+    serviceProvider: 'أنا مزود خدمة',
+    login: 'تسجيل الدخول',
+    next: 'التالي',
+    getStarted: 'البدء'
+  }
+};
 
 export default function Onboarding() {
   const { width: screenWidth } = useWindowDimensions();
@@ -37,22 +43,24 @@ export default function Onboarding() {
   });
 
   const onNextPress = () => {
-    if (currentIndex < slides.length - 1) {
+    if (currentIndex < translations.slides.length - 1) {
       scrollRef.current?.scrollTo({
         x: (currentIndex + 1) * screenWidth,
         animated: true,
       });
       setCurrentIndex(currentIndex + 1);
+    } else {
+      // On last slide, pressing next should go to role selection
+      router.replace(`/register?role=user`);
     }
   };
 
   const onRoleSelect = (role: 'user' | 'provider') => {
-    // TODO: Store role selection
     router.replace(`/register?role=${role}`);
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
       <Animated.ScrollView
         ref={scrollRef}
         horizontal
@@ -61,68 +69,75 @@ export default function Onboarding() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
       >
-        {slides.map((slide, index) => (
+        {translations.slides.map((slide, index) => (
           <View
             key={index}
             style={[styles.slide, { width: screenWidth }]}
           >
-            <Text variant="headlineLarge" style={styles.title}>
-              {slide.title}
-            </Text>
-            <Text variant="bodyLarge" style={styles.description}>
-              {slide.description}
-            </Text>
+            <View style={styles.contentContainer}>
+              <Text variant="headlineLarge" style={styles.title}>
+                {slide.title}
+              </Text>
+              <Text variant="titleMedium" style={styles.subtitle}>
+                {slide.subtitle}
+              </Text>
+              <Text variant="bodyLarge" style={styles.description}>
+                {slide.description}
+              </Text>
 
-            {index === slides.length - 1 && (
-              <View style={styles.roleButtons}>
-                <Button
-                  mode="contained"
-                  onPress={() => onRoleSelect('user')}
-                  style={styles.roleButton}
-                >
-                  I Need Assistance
-                </Button>
-                <Button
-                  mode="outlined"
-                  onPress={() => onRoleSelect('provider')}
-                  style={styles.roleButton}
-                >
-                  I'm a Service Provider
-                </Button>
-                <Button
-                  mode="contained"
-                  onPress={() => router.replace('/login')}
-                  style={{...styles.roleButton, marginTop: 30, backgroundColor: '#4A10E2'}}
-                >
-                    Login
-                </Button>
-              </View>
-            )}
+              {index === translations.slides.length - 1 && (
+                <View style={styles.roleButtons}>
+                  <Button
+                    mode="contained"
+                    onPress={() => onRoleSelect('user')}
+                    style={styles.primaryButton}
+                    contentStyle={styles.buttonContent}
+                    labelStyle={styles.buttonLabel}
+                    buttonColor="#4CAF50"
+                    textColor="#FFFFFF"
+                  >
+                    {translations.buttons.needAssistance}
+                  </Button>
+                  <Button
+                    mode="outlined"
+                    onPress={() => onRoleSelect('provider')}
+                    style={styles.outlinedButton}
+                    contentStyle={styles.buttonContent}
+                    labelStyle={styles.buttonLabel}
+                    textColor="#4CAF50"
+                  >
+                    {translations.buttons.serviceProvider}
+                  </Button>
+                  <Button
+                    mode="text"
+                    onPress={() => router.replace('/login')}
+                    style={styles.textButton}
+                    labelStyle={styles.textButtonLabel}
+                  >
+                    {translations.buttons.login}
+                  </Button>
+                </View>
+              )}
+            </View>
           </View>
         ))}
       </Animated.ScrollView>
 
-      <View style={styles.pagination}>
-        {slides.map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.paginationDot,
-              currentIndex === index && styles.paginationDotActive,
-            ]}
-          />
-        ))}
-      </View>
-
-      {currentIndex < slides.length - 1 && (
+      <View style={styles.footer}>
         <Button
           mode="contained"
           onPress={onNextPress}
           style={styles.nextButton}
+          contentStyle={styles.nextButtonContent}
+          labelStyle={styles.nextButtonLabel}
+          buttonColor="#4CAF50"
+          textColor="#FFFFFF"
         >
-          Next
+          {currentIndex === translations.slides.length - 1 
+            ? translations.buttons.getStarted 
+            : translations.buttons.next}
         </Button>
-      )}
+      </View>
     </View>
   );
 }
@@ -130,50 +145,85 @@ export default function Onboarding() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   slide: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
+  },
+  contentContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
   title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#000000',
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#2563EB',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 20,
+    color: '#424242',
+    textAlign: 'center',
+    marginBottom: 24,
   },
   description: {
+    fontSize: 16,
+    color: '#757575',
     textAlign: 'center',
     marginBottom: 40,
-    paddingHorizontal: 20,
+    lineHeight: 24,
   },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
     alignItems: 'center',
-    paddingVertical: 20,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#CBD5E1',
-    marginHorizontal: 4,
-  },
-  paginationDotActive: {
-    backgroundColor: '#2563EB',
-    width: 20,
-  },
-  nextButton: {
-    marginHorizontal: 20,
-    marginBottom: 20,
   },
   roleButtons: {
     width: '100%',
-    paddingHorizontal: 20,
+    marginTop: 16,
   },
-  roleButton: {
-    marginVertical: 10,
+  primaryButton: {
+    marginVertical: 8,
+    borderRadius: 28,
+    width: '100%',
+    elevation: 0,
+  },
+  outlinedButton: {
+    marginVertical: 8,
+    borderRadius: 28,
+    borderColor: '#4CAF50',
+    width: '100%',
+  },
+  textButton: {
+    marginTop: 8,
+  },
+  nextButton: {
+    borderRadius: 28,
+    width: '100%',
+    elevation: 0,
+  },
+  buttonContent: {
+    paddingVertical: 8,
+    height: 56,
+  },
+  nextButtonContent: {
+    paddingVertical: 8,
+    height: 56,
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  textButtonLabel: {
+    fontSize: 16,
+  },
+  nextButtonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

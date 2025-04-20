@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 interface Service {
   id: number;
-  title: string;
+  name: string;
   image: string;
   description: string;
 }
@@ -28,3 +28,4 @@ const useServiceStore = create<ServiceStore>((set) => ({
 }));
 
 export default useServiceStore;
+export type { Service };

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { toggleActiveStatus, updateLocation } from '@/lib/api/provider';
+import { getStats, toggleActiveStatus, updateLocation } from '@/lib/api/provider';
 import { useAuthStore } from '@/stores/authStore';
 import { usePushNotification } from '@/hooks/usePushNotification';
 import { updateExpoToken } from '@/lib/api/provider';
@@ -18,6 +18,8 @@ type DailyStats = {
   rating: number;
 };
 
+
+
 export default function DashboardScreen() {
   const theme = useTheme();
   const [isOnline, setIsOnline] = useState(true);
@@ -27,15 +29,22 @@ export default function DashboardScreen() {
   const [expanded, setExpanded] = useState(false);
   const animatedHeight = useState(new Animated.Value(0))[0];
   const { user } = useAuthStore();
-
-
-
-  const [todayStats] = useState<DailyStats>({
-    totalEarnings: 185.50,
-    completedRequests: 4,
-    totalHours: 6,
-    rating: 4.8,
+  const [todayStats, setTodayStats] = useState<DailyStats>({
+    totalEarnings: 0,
+    completedRequests: 0,
+    totalHours: 0,
+    rating: 0,
   });
+
+
+
+  
+  // const [todayStats] = useState<DailyStats>({
+  //   totalEarnings: 185.50,
+  //   completedRequests: 4,
+  //   totalHours: 6,
+  //   rating: 4.8,
+  // });
 
   const router = useRouter();
 
@@ -90,13 +99,9 @@ export default function DashboardScreen() {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          setErrorMsg('Permission to access location was denied');
+          setErrorMsg('تم رفض إذن الوصول إلى الموقع');
           return;
         }
-
-        // if(user){
-        //   setIsOnline(user.is_active);
-        // }
 
         // Get initial location
         let initialLocation = await Location.getCurrentPositionAsync({
@@ -140,7 +145,7 @@ export default function DashboardScreen() {
 
         setLocationSubscription(subscription);
       } catch (error) {
-        setErrorMsg('Error accessing location services');
+        setErrorMsg('خطأ في الوصول إلى خدمات الموقع');
         console.error('Location error:', error);
       }
     })();
@@ -156,6 +161,20 @@ export default function DashboardScreen() {
     };
   }, [isOnline]);
 
+  useEffect(() => {
+    const gettoday = async () => {
+      const res = await getStats();
+      // console.log(res);
+      setTodayStats({
+        totalEarnings: res.data.total_revenue,
+        completedRequests: res.data.total_requests,
+        totalHours: res.data.total_worked_hours,
+        rating: res.data.total_rates,
+      });
+
+    }
+    gettoday();
+  }, []);
 
   useEffect(() => {
     const checkActiveRequest = async () => {
@@ -183,12 +202,12 @@ export default function DashboardScreen() {
       });
     } catch (error) {
       console.error('Error toggling active status:', error);
-      Alert.alert('Error', 'Failed to update status. Please try again.');
+      Alert.alert('خطأ', 'فشل في تحديث الحالة. يرجى المحاولة مرة أخرى.');
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
+    return `$${amount}`;
   };
 
   const toggleAccordion = () => {
@@ -203,45 +222,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={{
-        position: 'absolute',
-        top: 60,
-        right: 16,
-        zIndex: 1,
-        backgroundColor: '#FF4444',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 24,
-        flexDirection: 'row',
-        alignItems: 'center',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        opacity: new Animated.Value(1),
-        transform: [{
-          scale: new Animated.Value(1)
-        }],
-      }}>
-        <View style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: '#FFFFFF',
-          marginRight: 8,
-        }} />
-        <Text style={{
-          color: '#FFFFFF',
-          fontSize: 14,
-          fontWeight: '600',
-          letterSpacing: 0.3,
-        }}>
-          {newNotifications.length}
-          {newNotifications.length === 1 ? 'new request' : 'new requests'}
-        </Text>
-      </Animated.View>
-
+      
       {location ? (
         <MapView
           provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
@@ -264,7 +245,7 @@ export default function DashboardScreen() {
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
             }}
-            title="Your Location"
+            title="موقعك الحالي"
           >
             <View style={[styles.markerContainer, { backgroundColor: isOnline ? theme.colors.primary : '#6B7280' }]}>
               <MaterialCommunityIcons
@@ -277,7 +258,7 @@ export default function DashboardScreen() {
         </MapView>
       ) : (
         <View style={styles.map}>
-          <Text>{errorMsg || 'Loading map...'}</Text>
+          <Text>{errorMsg || 'جاري تحميل الخريطة...'}</Text>
         </View>
       )}
 
@@ -294,13 +275,13 @@ export default function DashboardScreen() {
           color="white"
         />
         <Text style={styles.toggleButtonText}>
-          {isOnline ? 'Online' : 'Offline'}
+          {isOnline ? 'متصل' : 'غير متصل'}
         </Text>
       </TouchableOpacity>
 
       <View style={styles.bottomSheet}>
         <List.Accordion
-          title="Today's Overview"
+          title="نظرة عامة لليوم"
           left={props => <List.Icon {...props} icon="calendar-today" />}
           style={styles.accordion}
           expanded={expanded}
@@ -326,10 +307,10 @@ export default function DashboardScreen() {
                   color={theme.colors.primary}
                 />
                 <Text variant="titleLarge" style={styles.statValue}>
-                  {formatCurrency(todayStats.totalEarnings)}
+                  {formatCurrency(todayStats.totalEarnings ?? 0)}
                 </Text>
                 <Text variant="bodySmall" style={styles.statLabel}>
-                  Earnings
+                  الأرباح
                 </Text>
               </Card.Content>
             </Card>
@@ -345,7 +326,7 @@ export default function DashboardScreen() {
                   {todayStats.completedRequests}
                 </Text>
                 <Text variant="bodySmall" style={styles.statLabel}>
-                  Completed
+                  مكتمل
                 </Text>
               </Card.Content>
             </Card>
@@ -358,10 +339,10 @@ export default function DashboardScreen() {
                   color={theme.colors.primary}
                 />
                 <Text variant="titleLarge" style={styles.statValue}>
-                  {todayStats.totalHours}h
+                  {Math.floor(todayStats.totalHours * 60)}د
                 </Text>
                 <Text variant="bodySmall" style={styles.statLabel}>
-                  Hours
+                  دقائق
                 </Text>
               </Card.Content>
             </Card>
@@ -377,7 +358,7 @@ export default function DashboardScreen() {
                   {todayStats.rating}
                 </Text>
                 <Text variant="bodySmall" style={styles.statLabel}>
-                  Rating
+                  التقييم
                 </Text>
               </Card.Content>
             </Card>

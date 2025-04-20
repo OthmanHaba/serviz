@@ -10,9 +10,11 @@ const lockup = async (data: LockUpRequest) => {
   return await api.post("/service/lockup-service",data);
 };
 
-const userApproveActiveRequest = async (id: number) => {
+//approve,decline
+const userApproveActiveRequest = async (id: number,action: 'approve' | 'decline') => {
   return await api.post('/service/user/conform-service',{
-    'active_request_id' : id
+    'active_request_id' : id,
+    'action' : action
   });
 }
 

@@ -4,7 +4,7 @@
     "slug": "Serviz",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
+    "icon": "./assets/images/serv_logo.jpg",
     "scheme": "serviz",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -16,22 +16,25 @@
         "NSLocationWhenInUseUsageDescription": "This app uses your location to show your position on the map"
       },
       "config": {
-        "googleMapsApiKey": "YOUR_IOS_API_KEY"
+        "googleMapsApiKey": "AIzaSyDCXFvA0zePher8Vvtd14UQLByfk5-VGG4"
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/serv_logo.jpg",
         "backgroundColor": "#ffffff"
       },
+
       "package": "com.othmanhaba.Serviz",
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.INTERNET"
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_ANDROID_API_KEY"
+          "apiKey": "AIzaSyDCXFvA0zePher8Vvtd14UQLByfk5-VGG4"
         }
       }
     },
@@ -45,7 +48,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logo.png",
+          "image": "./assets/images/serv_logo.jpg",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

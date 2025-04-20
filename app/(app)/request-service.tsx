@@ -1,7 +1,8 @@
 import { View, StyleSheet, ScrollView, SafeAreaView, Image, Alert } from 'react-native';
 import { Text, Button, TextInput, ProgressBar, useTheme, Card } from 'react-native-paper';
-import { useState } from 'react';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import useServiceStore from '@/stores/serviceStore';
 import { ActiveRequest, LockUpRequest } from '@/types';
@@ -26,13 +27,31 @@ export default function RequestServiceScreen() {
   const totalSteps = 3;
 
   const [price, setPrice] = useState(0);
+  
+  // Using useFocusEffect to reset when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // This runs when the screen is focused
+      setStep(1);
+      setNotFound(false);
+      setNotFoundMessage("");
+      setActiveRequest(null);
+      setProvider(null);
+      setPrice(0);
+      
+      return () => {
+        // This runs when the screen is unfocused
+        // Optional cleanup can be done here
+      };
+    }, [])
+  );
 
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
           <SafeAreaView style={styles.stepContainer}>
-            <Text variant="titleLarge" style={styles.stepTitle}>Confirm Service Type</Text>
+            <Text variant="titleLarge" style={styles.stepTitle}>تأكيد نوع الخدمة</Text>
             <Card style={styles.serviceCard}>
               <Card.Content style={styles.serviceCardContent}>
                 <Image
@@ -50,7 +69,7 @@ export default function RequestServiceScreen() {
       case 2:
         return (
           <SafeAreaView style={styles.stepContainer}>
-            <Text variant="titleLarge" style={styles.stepTitle}>Confirm Location</Text>
+            <Text variant="titleLarge" style={styles.stepTitle}>تأكيد الموقع</Text>
             <MapView
               style={styles.map}
               initialRegion={{
@@ -73,29 +92,29 @@ export default function RequestServiceScreen() {
       case 3:
         return !notFound ? (
           <SafeAreaView style={styles.stepContainer}>
-            <Text variant="titleLarge" style={styles.stepTitle}>Confirmation</Text>
+            <Text variant="titleLarge" style={styles.stepTitle}>التأكيد</Text>
             <Card style={styles.summaryCard}>
               <Card.Content>
 
-                <Text variant="titleMedium">Service Type:</Text>
+                <Text variant="titleMedium">نوع الخدمة:</Text>
                 <Text style={styles.summaryText}>{selectedService?.name}</Text>
 
-                {/* <Text variant="titleMedium" style={styles.summaryLabel}>Location:</Text>
-                <Text style={styles.summaryText}>Current Location</Text> */}
+                {/* <Text variant="titleMedium" style={styles.summaryLabel}>الموقع:</Text>
+                <Text style={styles.summaryText}>الموقع الحالي</Text> */}
 
-                <Text variant="titleMedium" style={styles.summaryLabel}>Estimated Price:</Text>
+                <Text variant="titleMedium" style={styles.summaryLabel}>السعر التقريبي:</Text>
                 <Text style={styles.summaryText}>{activeRequest?.price}</Text>
               </Card.Content>
             </Card>
           </SafeAreaView>
         ) : (
           <View style={styles.stepContainer}>
-            <Text variant="titleLarge" style={styles.stepTitle}>No Service Available</Text>
+            <Text variant="titleLarge" style={styles.stepTitle}>لا توجد خدمة متاحة</Text>
             <Card style={styles.summaryCard}>
               <Card.Content>
                 <Text style={styles.summaryText}>
                   {notFoundMessage}
-                  {/* Sorry, there are no service providers available in your area at this time. Please try again later. */}
+                  {/* عذرًا، لا يوجد مقدمي خدمة متاحين في منطقتك في الوقت الحالي. يرجى المحاولة مرة أخرى لاحقًا. */}
                 </Text>
               </Card.Content>
             </Card>
@@ -143,14 +162,18 @@ export default function RequestServiceScreen() {
 
 
   };
-  const onSubmit = async () => {
+  const onSubmit = async (action: 'approve' | 'decline') => {
     try {
       if (!activeRequest) {
         return;
       }
-      const res = await userApproveActiveRequest(activeRequest?.id);
+      const res = await userApproveActiveRequest(activeRequest?.id, action);
       console.log(res);
-      router.push(`/active-requests?id=${activeRequest?.id}`);
+      if(action === 'approve'){
+        router.push(`/active-requests?id=${activeRequest?.id}`);
+      }else{
+        router.push(`/home`);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -169,13 +192,21 @@ export default function RequestServiceScreen() {
       </ScrollView>
 
       <View style={styles.buttonContainer}>
-        {step > 1 && (
+        {step > 1 && step !== 3 ? (
           <Button
             mode="outlined"
             onPress={() => setStep(step - 1)}
             style={styles.button}
           >
-            Back
+            رجوع
+          </Button>
+        ) : (
+          <Button
+            mode="outlined"
+            onPress={() => onSubmit('decline')}
+            style={styles.button}
+          >
+            الغاء الطلب
           </Button>
         )}
 
@@ -185,15 +216,15 @@ export default function RequestServiceScreen() {
             onPress={step === 2 ? getEstimatedPrice : () => setStep(step + 1)}
             style={[styles.button, step === 1 && styles.singleButton]}
           >
-            Next
+            التالي
           </Button>
         ) : !notFound && (
           <Button
             mode="contained"
-            onPress={onSubmit}
+            onPress={() => onSubmit('approve')}
             style={styles.button}
           >
-            Confirm Request
+            تأكيد الطلب
           </Button>
         )}
       </View>

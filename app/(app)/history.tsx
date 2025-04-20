@@ -97,7 +97,7 @@ export default function HistoryScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [sortMenuVisible, setSortMenuVisible] = useState(false);
   const [selectedSort, setSelectedSort] = useState<string>('date_desc');
-  const [historyItems, setHistoryItems] = useState<HistoryItem | null>(null);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchHistory = async () => {
@@ -121,7 +121,7 @@ export default function HistoryScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('ar-SA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -131,12 +131,12 @@ export default function HistoryScreen() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
+    return `$${amount}`;
   };
 
   const filterHistory = (items: HistoryItem[]) => {
     let filtered = items;
-    if(!items) return;
+    if(!items) return [];
 
     // Apply search
     if (searchQuery) {
@@ -170,6 +170,18 @@ export default function HistoryScreen() {
     return filtered;
   };
 
+  // Translate status text to Arabic
+  const translateStatus = (status: string) => {
+    const statusTranslations: { [key: string]: string } = {
+      'Completed': 'مكتمل',
+      'Pending': 'قيد الانتظار',
+      'In Progress': 'قيد التنفيذ',
+      'Cancelled': 'ملغي'
+    };
+    
+    return statusTranslations[status] || status;
+  };
+
   const renderHistoryItem = ({ item }: { item: HistoryItem }) => {
     const vehicleInfo: VehicleInfo = JSON.parse(item.user.vehicle_info);
 
@@ -189,7 +201,7 @@ export default function HistoryScreen() {
               </Text>
             </View>
             <Text variant="labelLarge" style={styles.cost}>
-              ${parseFloat(item.price).toFixed(2)}
+              {formatCurrency(parseFloat(item.price) ?? 0)}
             </Text>
           </View>
 
@@ -217,7 +229,7 @@ export default function HistoryScreen() {
                   color={item.status.toLowerCase() === 'completed' ? '#10B981' : '#F59E0B'}
                 />
                 <Text variant="bodySmall" style={{ marginLeft: 4, color: item.status.toLowerCase() === 'completed' ? '#10B981' : '#F59E0B' }}>
-                  {item.status}
+                  {translateStatus(item.status)}
                 </Text>
               </View>
             </View>
@@ -227,11 +239,26 @@ export default function HistoryScreen() {
     );
   };
 
+  // Helper function to translate service types
+  const translateServiceType = (serviceType: string) => {
+    const serviceTranslations: { [key: string]: string } = {
+      'towing': 'سحب السيارات',
+      'gas': 'توصيل الوقود',
+      'mechanic': 'ميكانيكي',
+      'All Services': 'جميع الخدمات',
+      'Towing': 'سحب السيارات',
+      'Gas Delivery': 'توصيل الوقود',
+      'Mechanic': 'ميكانيكي'
+    };
+    
+    return serviceTranslations[serviceType] || serviceType;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Searchbar
-          placeholder="Search history"
+          placeholder="بحث في السجل"
           onChangeText={setSearchQuery}
           value={searchQuery}
           style={styles.searchBar}
@@ -247,7 +274,7 @@ export default function HistoryScreen() {
                 icon="filter-variant"
                 style={styles.filterButton}
               >
-                Filter
+                تصفية
               </Button>
             }
           >
@@ -256,28 +283,28 @@ export default function HistoryScreen() {
                 setSelectedFilter(null);
                 setFilterMenuVisible(false);
               }}
-              title="All Services"
+              title="جميع الخدمات"
             />
             <Menu.Item
               onPress={() => {
                 setSelectedFilter('towing');
                 setFilterMenuVisible(false);
               }}
-              title="Towing"
+              title="سحب السيارات"
             />
             <Menu.Item
               onPress={() => {
                 setSelectedFilter('gas');
                 setFilterMenuVisible(false);
               }}
-              title="Gas Delivery"
+              title="توصيل الوقود"
             />
             <Menu.Item
               onPress={() => {
                 setSelectedFilter('mechanic');
                 setFilterMenuVisible(false);
               }}
-              title="Mechanic"
+              title="ميكانيكي"
             />
           </Menu>
 
@@ -291,7 +318,7 @@ export default function HistoryScreen() {
                 icon="sort"
                 style={styles.filterButton}
               >
-                Sort
+                ترتيب
               </Button>
             }
           >
@@ -300,28 +327,28 @@ export default function HistoryScreen() {
                 setSelectedSort('date_desc');
                 setSortMenuVisible(false);
               }}
-              title="Latest First"
+              title="الأحدث أولاً"
             />
             <Menu.Item
               onPress={() => {
                 setSelectedSort('date_asc');
                 setSortMenuVisible(false);
               }}
-              title="Oldest First"
+              title="الأقدم أولاً"
             />
             <Menu.Item
               onPress={() => {
                 setSelectedSort('cost_desc');
                 setSortMenuVisible(false);
               }}
-              title="Highest Cost"
+              title="الأعلى تكلفة"
             />
             <Menu.Item
               onPress={() => {
                 setSelectedSort('cost_asc');
                 setSortMenuVisible(false);
               }}
-              title="Lowest Cost"
+              title="الأقل تكلفة"
             />
           </Menu>
         </View>
@@ -333,7 +360,7 @@ export default function HistoryScreen() {
             onClose={() => setSelectedFilter(null)}
             style={styles.filterChip}
           >
-            {selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1)}
+            {translateServiceType(selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1))}
           </Chip>
         </View>
       )}
@@ -348,7 +375,7 @@ export default function HistoryScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="history" size={64} color="#9CA3AF" />
-            <Text variant="titleLarge" style={styles.emptyText}>No History Found</Text>
+            <Text variant="titleLarge" style={styles.emptyText}>لا يوجد سجل</Text>
           </View>
         }
       />

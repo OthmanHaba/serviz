@@ -26,7 +26,6 @@ export default function HomeScreen() {
     // Connect to the Laravel Reverb channel
     try {
 
-
       if (echo.connector.pusher.connection.state == 'connected') {
         setIsChannelConnected(true);
       }
@@ -52,7 +51,7 @@ export default function HomeScreen() {
       let { status } = await Location.requestForegroundPermissionsAsync();
       await fetchServices();
       if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
+        setErrorMsg('تم رفض إذن الوصول إلى الموقع');
         return;
       }
 
@@ -64,6 +63,16 @@ export default function HomeScreen() {
       );
     })();
   }, []);
+
+  // Services refresh scheduler - every 30 seconds
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      fetchServices();
+      console.log('Services refreshed');
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [fetchServices]);
 
   // Fallback polling mechanism if Echo is not connected
   useEffect(() => {
@@ -100,7 +109,7 @@ export default function HomeScreen() {
       {!isChannelConnected ? (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#1006F3" />
-          <Text style={styles.loadingText}>Connecting to notifications...</Text>
+          <Text style={styles.loadingText}>جاري الاتصال بالإشعارات...</Text>
         </View>
       ) : null}
 
@@ -143,13 +152,13 @@ export default function HomeScreen() {
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
               }}
-              title="Your Location"
+              title="موقعك الحالي"
             >
               <View style={[styles.markerContainer]}>
                 <MaterialCommunityIcons
-                  name="account-circle"
+                  name="map-marker-radius"
                   size={24}
-                  color="white"
+                  color="#FF4444"
                 />
               </View>
             </Marker>
@@ -157,7 +166,7 @@ export default function HomeScreen() {
           </MapView>
         ) : (
           <View style={styles.mapPlaceholder}>
-            <Text>{errorMsg || 'Loading map...'}</Text>
+            <Text>{errorMsg || 'جاري تحميل الخريطة...'}</Text>
           </View>
         )}
       </View>
@@ -178,10 +187,11 @@ export default function HomeScreen() {
             <Card.Content style={styles.serviceCardContent}>
               <Image
                 source={{ uri: service.image }}
-                style={{ width: 40, height: 40 }}
+                style={{ width: 62, height: 62 }}
+                resizeMode="contain"
               />
               <Text variant="titleMedium" style={styles.serviceTitle}>
-                {service.title}
+                {service.name}
               </Text>
               <Text variant="bodySmall" style={styles.serviceDescription}>
                 {service.description}

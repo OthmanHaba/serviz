@@ -132,7 +132,7 @@ export default function EarningsScreen() {
   };
 
   const formatCurrency = (amount: number) => {
-    return `$${amount.toFixed(2)}`;
+    return `$${amount}`;
   };
 
   const formatDate = (dateString: string) => {

@@ -1,6 +1,6 @@
 import { View, StyleSheet, FlatList, Image, Alert, RefreshControl } from 'react-native';
 import { Text, Card, Button, Chip, useTheme, Portal, Modal } from 'react-native-paper';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -35,9 +35,23 @@ export default function RequestsScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const refreshInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // Initial load
     loadRequests();
+    
+    // Set up the refresh interval (every 30 seconds)
+    refreshInterval.current = setInterval(() => {
+      loadRequests();
+    }, 30000);
+    
+    // Clean up on component unmount
+    return () => {
+      if (refreshInterval.current) {
+        clearInterval(refreshInterval.current);
+      }
+    };
   }, []);
 
   const loadRequests = async () => {
@@ -46,7 +60,7 @@ export default function RequestsScreen() {
       const res = await getActiveRequests();
       setRequests(res.data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load requests');
+      Alert.alert('خطأ', 'فشل تحميل الطلبات');
     } finally {
       setLoading(false);
     }
@@ -58,14 +72,14 @@ export default function RequestsScreen() {
       const res = await getActiveRequests();
       setRequests(res.data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to refresh requests');
+      Alert.alert('خطأ', 'فشل تحديث الطلبات');
     } finally {
       setRefreshing(false);
     }
   };
 
   const getServiceIcon = () => {
-    return 'car-wrench';
+    return 'car-wrench' as const;
   };
 
   const handleAcceptRequest = async (request: ServiceRequest) => {
@@ -82,10 +96,10 @@ export default function RequestsScreen() {
       if (res.status === 201) {
         // Remove the declined request from the list
         setRequests((prev) => prev ? prev.filter(r => r.id !== request.id) : null);
-        Alert.alert('Success', 'Request declined successfully');
+        Alert.alert('نجاح', 'تم رفض الطلب بنجاح');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to decline request');
+      Alert.alert('خطأ', 'فشل رفض الطلب');
     }
   };
 
@@ -95,12 +109,11 @@ export default function RequestsScreen() {
         <View style={styles.cardHeader}>
           <View style={styles.serviceInfo}>
               <Image
-                style={{width:25, height: 25}}
-                src={item.service.image}
-                resizeMode='contain'
+                style={{width:25, height: 25, resizeMode: 'contain'}}
+                source={{uri: item.service.image}}
               />
             <Text variant="titleMedium" style={styles.serviceType}>
-              service type: {item.service.name}
+              نوع الخدمة: {item.service.name}
             </Text>
 
             
@@ -156,14 +169,14 @@ export default function RequestsScreen() {
             onPress={() => handleAcceptRequest(item)}
             style={styles.acceptButton}
           >
-            Accept Request
+            قبول الطلب
           </Button>
           <Button
             mode="outlined"
             style={{borderColor: 'red'}}
             onPress={() => handleDeclineRequest(item)}
           >
-            Cancel
+            رفض
           </Button>
         </View>
       </Card.Content>
@@ -180,7 +193,7 @@ export default function RequestsScreen() {
         {selectedRequest && (
           <View>
             <View style={styles.modalHeader}>
-              <Text variant="headlineSmall">Request Details</Text>
+              <Text variant="headlineSmall">تفاصيل الطلب</Text>
               <MaterialCommunityIcons
                 name={getServiceIcon()}
                 size={24}
@@ -209,7 +222,7 @@ export default function RequestsScreen() {
             )}
 
             <View style={styles.detailsContent}>
-              <Text variant="titleMedium">Customer Information</Text>
+              <Text variant="titleMedium">معلومات العميل</Text>
               <Text variant="bodyLarge" style={styles.detailText}>
                 {selectedRequest.user.name}
               </Text>
@@ -220,9 +233,9 @@ export default function RequestsScreen() {
                 {selectedRequest.user.email}
               </Text>
 
-              <Text variant="titleMedium" style={styles.detailLabel}>Status</Text>
+              <Text variant="titleMedium" style={styles.detailLabel}>الحالة</Text>
               <Text variant="bodyLarge" style={styles.detailText}>
-                {selectedRequest.status}
+                {selectedRequest.status === 'PendingProviderApproved' ? 'في انتظار موافقة المزود' : selectedRequest.status}
               </Text>
 
               <Button
@@ -233,7 +246,7 @@ export default function RequestsScreen() {
                 }}
                 style={styles.modalAcceptButton}
               >
-                Accept Request
+                قبول الطلب
               </Button>
             </View>
           </View>
@@ -260,7 +273,7 @@ export default function RequestsScreen() {
               color="#9CA3AF"
             />
             <Text variant="titleLarge" style={styles.emptyText}>
-              No Requests Available
+              لا توجد طلبات متاحة
             </Text>
           </View>
         }

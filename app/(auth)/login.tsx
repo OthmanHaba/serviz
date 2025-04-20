@@ -1,4 +1,4 @@
-import { View, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Alert, ActivityIndicator, I18nManager } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -6,6 +6,21 @@ import { Link, useRouter } from 'expo-router';
 import { login } from '@/lib/api/login';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+
+// Arabic translations
+const translations = {
+  welcomeBack: 'مرحباً بعودتك',
+  email: 'البريد الإلكتروني',
+  password: 'كلمة المرور',
+  login: 'تسجيل الدخول',
+  register: 'ليس لديك حساب؟ سجل الآن',
+  forgotPassword: 'نسيت كلمة المرور؟',
+  loggingIn: 'جاري تسجيل الدخول...',
+  testUserLogin: 'تسجيل دخول مستخدم تجريبي',
+  testProviderLogin: 'تسجيل دخول مزود خدمة تجريبي',
+  invalidCredentials: 'بيانات الدخول غير صحيحة',
+  error: 'خطأ'
+};
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -61,8 +76,8 @@ export default function Login() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text variant="headlineMedium" style={styles.title}>Welcome Back</Text>
+    <View style={[styles.container, { direction: 'rtl' }]}>
+      <Text variant="headlineMedium" style={styles.title}>{translations.welcomeBack}</Text>
 
       <Controller
         control={control}
@@ -70,13 +85,14 @@ export default function Login() {
         rules={{ required: true }}
         render={({ field: { onChange, value }, fieldState: { error } }) => (
           <TextInput
-            label="Email"
+            label={translations.email}
             value={value}
             onChangeText={onChange}
             error={!!error}
             style={styles.input}
             keyboardType="email-address"
             autoCapitalize="none"
+            textAlign="right"
           />
         )}
       />
@@ -87,30 +103,29 @@ export default function Login() {
         rules={{ required: true }}
         render={({ field: { onChange, value }, fieldState: { error } }) => (
           <TextInput
-            label="Password"
+            label={translations.password}
             value={value}
             onChangeText={onChange}
             error={!!error}
             secureTextEntry
             style={styles.input}
+            textAlign="right"
           />
         )}
       />
 
       {error && (
         <View>
-          <Text style={{ color: 'red' }}>{error.message}</Text>
+          <Text style={{ color: 'red', textAlign: 'right' }}>{translations.invalidCredentials}</Text>
         </View>
-
       )}
 
       <Button
         mode="contained"
-        // disabled={value}
         onPress={handleSubmit(onSubmit)}
         style={styles.button}
       >
-        Login
+        {translations.login}
       </Button>
 
       <View style={styles.testButtonsContainer}>
@@ -119,30 +134,26 @@ export default function Login() {
           onPress={() => testOnSubmit('user')}
           style={styles.testButton}
         >
-          Test User Login
+          {translations.testUserLogin}
         </Button>
         <Button
           mode="outlined"
           onPress={() => testOnSubmit('provider')}
           style={styles.testButton}
         >
-          Test Provider Login
+          {translations.testProviderLogin}
         </Button>
       </View>
 
       <Link href="/register" asChild>
-        <Button mode="text">Don't have an account? Register</Button>
+        <Button mode="text">{translations.register}</Button>
       </Link>
-
-      {/* <Link href="/forgot-password" asChild>
-        <Button mode="text">Forgot Password?</Button>
-      </Link> */}
 
       {isLoading && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#6750A4" />
-            <Text style={styles.loadingText}>Logging in...</Text>
+            <Text style={styles.loadingText}>{translations.loggingIn}</Text>
           </View>
         </View>
       )}
@@ -162,6 +173,7 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 10,
+    textAlign: 'right',
   },
   button: {
     marginTop: 10,

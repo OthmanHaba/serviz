@@ -27,3 +27,22 @@ export const getActiveRequests = async () => {
 export const profile= async () => {
   return await axios.get('/profile');
 }
+
+export const getStats = async () => {
+  return await axios.get('/provider/statistics');
+}
+
+export const getServiceTypes = async () => {
+  return await axios.get('/provider/service-types');
+};
+
+export const addProviderService = async (serviceTypeId: number, price: string) => {
+  return await axios.post('/provider/add-service', {
+    service_type_id: serviceTypeId,
+    price: price,
+  });
+};
+
+export const deleteProviderService = async (serviceId: number) => {
+  return await axios.delete(`/provider/services/${serviceId}`);
+};
