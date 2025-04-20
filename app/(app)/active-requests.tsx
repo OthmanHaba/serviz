@@ -68,7 +68,11 @@ export default function ActiveRequestsScreen() {
         setActiveRequest(res.data);
       } catch (error) {
         router.setParams({ id: null });
-        router.push('/home');
+        router.push(
+          user?.role === 'provider' 
+          ? '/dashboard' 
+          : '/home'
+        );
         console.error('خطأ في تحديث بيانات الطلب:', error);
       }
     }, 4000);
