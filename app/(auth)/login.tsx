@@ -36,6 +36,7 @@ export default function Login() {
   const { setUser, setToken } = useAuthStore();
   const [error, setError] = useState<{
     message: string,
+    errors?: Record<string, string[]>
   } | null>(null);
 
   const testOnSubmit = async (type: string) => {
@@ -48,7 +49,24 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     try {
       setIsLoading(true);
+      setError(null);
       const response = await login(data);
+
+      if (response.status === 422) {
+        // Handle Laravel validation errors
+        setError({
+          message: 'Validation failed',
+          errors: response.data.errors
+        });
+        return;
+      }
+
+      if (response.status === 201) {
+        console.log(response)
+        Alert.alert('Error', response.data.message);
+        return;
+      }
+
       if (response.status === 200) {
         if (response.data.user.role === 'provider') {
           setUser(response.data.user);
@@ -64,12 +82,20 @@ export default function Login() {
         Alert.alert('Error', response.data.message);
       }
     } catch (_error: any) {
-      if (_error.status == 401) {
+      if (_error.status === 422) {
+        // Handle Laravel validation errors from catch block
         setError({
-          "message": "Invalid credentials"
+          message: 'البيانات المدخلة غير صالحة',
+          errors: _error.data?.errors
         });
+      } else if (_error.status === 401) {
+        setError({
+          message: translations.invalidCredentials
+        });
+      } else {
+        Alert.alert(translations.error, _error.message);
       }
-      console.log(error);
+      console.log(_error);
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +142,12 @@ export default function Login() {
 
       {error && (
         <View>
-          <Text style={{ color: 'red', textAlign: 'right' }}>{translations.invalidCredentials}</Text>
+          <Text style={{ color: 'red', textAlign: 'right' }}>{error.message}</Text>
+          {error.errors && Object.entries(error.errors).map(([field, messages]) => (
+            <Text key={field} style={{ color: 'red', textAlign: 'right' }}>
+              {messages[0]}
+            </Text>
+          ))}
         </View>
       )}
 

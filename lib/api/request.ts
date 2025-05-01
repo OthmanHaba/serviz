@@ -7,8 +7,9 @@ export const requestService = async (data: any) => {
 };
 
 
-export const completeActiveRequest = async (id: number) => {
+export const completeActiveRequest = async (id: number , paymentMethod : string) => {
   return api.post('/service/active-request/complete', {
-    active_request_id: id
+    active_request_id: id,
+    payment_method : paymentMethod
   });
 }

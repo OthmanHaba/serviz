@@ -21,7 +21,7 @@ export interface User {
 
 export interface ServiceRequest {
   id: number;
-  status: 'PendingUserApproved' | 'PendingProviderApproved' | 'InProgress' | 'Completed';
+  status: 'PendingUserApproved' | 'PendingProviderApproved' | 'InProgress' | 'Completed' | 'Cancelled';
   serviceType: string;
   provider: Provider;
   user: User;

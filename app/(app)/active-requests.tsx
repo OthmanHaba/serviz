@@ -1,5 +1,5 @@
 import { View, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { Text, Card, Button, Avatar, IconButton, Portal, Modal } from 'react-native-paper';
+import { Text, Card, Button, Avatar, IconButton, Portal, Modal, RadioButton } from 'react-native-paper';
 import { useState, useEffect } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -24,6 +24,7 @@ export default function ActiveRequestsScreen() {
   const [providerLocation, setProviderLocation] = useState<Location.LocationObjectCoords | null>(null);
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'cash'>('wallet');
 
 
 
@@ -94,6 +95,8 @@ export default function ActiveRequestsScreen() {
         return '#F472B6';
       case 'Completed':
         return '#10B981';
+      case 'Cancelled':
+        return '#EF4444';
       default:
         return '#6B7280';
     }
@@ -111,6 +114,8 @@ export default function ActiveRequestsScreen() {
         return 'الخدمة قيد التنفيذ';
       case 'Completed':
         return 'تم إكمال الخدمة';
+      case 'Cancelled':
+        return 'تم إلغاء الخدمة';
       default:
         return 'حالة غير معروفة';
     }
@@ -199,12 +204,13 @@ export default function ActiveRequestsScreen() {
     setIsLoading(true);
 
     try {
-      await completeActiveRequest(activeRequest.id);
+      await completeActiveRequest(activeRequest.id, paymentMethod);
       setIsLoading(false);
       Alert.alert('تم إكمال الطلب بنجاح');
       router.back();
-    } catch (e) {
-      console.error(e);
+    } catch (e : any) {
+      Alert.alert(e.response.data.message);
+      console.error(e.response.data.message);
       setIsLoading(false);
     }
   }
@@ -257,6 +263,46 @@ export default function ActiveRequestsScreen() {
               <Button mode="contained" onPress={() => handleComplete()} style={{ marginTop: 10 }} loading={isLoading} disabled={isLoading}>
                 إكمال
               </Button>
+              <View style={{
+                marginTop: 16,
+                backgroundColor: '#f5f5f5',
+                padding: 16,
+                borderRadius: 8,
+                elevation: 2
+              }}>
+                <Text style={{
+                  textAlign: 'right',
+                  marginBottom: 12,
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#333'
+                }}>طريقة الدفع</Text>
+                <RadioButton.Group onValueChange={(value) => setPaymentMethod(value as 'wallet' | 'cash')} value={paymentMethod}>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center', 
+                    justifyContent: 'flex-end',
+                    backgroundColor: '#fff',
+                    padding: 12,
+                    borderRadius: 6,
+                    marginBottom: 8
+                  }}>
+                    <Text style={{marginRight: 8, fontSize: 15}}>محفظة</Text>
+                    <RadioButton value="wallet" color="#6366f1" />
+                  </View>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    backgroundColor: '#fff', 
+                    padding: 12,
+                    borderRadius: 6
+                  }}>
+                    <Text style={{marginRight: 8, fontSize: 15}}>نقداً</Text>
+                    <RadioButton value="cash" color="#6366f1" />
+                  </View>
+                </RadioButton.Group>
+              </View>
             </View>
           </View>
         }

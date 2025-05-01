@@ -40,6 +40,8 @@ export default function SupportSessionDetailsScreen() {
                 refreshMessages();
             }
         }, 3000);
+
+        console.log(sessionDetails)
         
         return () => {
             if (refreshIntervalRef.current) {
