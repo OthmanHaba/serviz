@@ -59,9 +59,18 @@ const registrationSchema = z.object({
 type RegistrationForm = z.infer<typeof registrationSchema>;
 
 export default function Register() {
-  const [step, setStep] = useState(1);
-  const totalSteps = 3;
-  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<RegistrationForm>();
+  const { control, handleSubmit, watch, setValue, trigger, formState: { errors }, reset } = useForm<RegistrationForm>({
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      vehicleType: '',
+      vehicleModel: '',
+      vehicleYear: '',
+      role: 'user'
+    }
+  });
   const { role: initialRole } = useLocalSearchParams();
   const { services, fetchServices } = useServiceStore();
   const [selectedServices, setSelectedServices] = useState<{
@@ -73,23 +82,31 @@ export default function Register() {
   // Watch the role value from the form
   const formRole = watch('role');
 
+  // Reset form when component mounts
   useEffect(() => {
-    // Set initial role from URL params
+    reset({
+      name: '',
+      email: '',
+      phone: '',
+      password: '',
+      vehicleType: '',
+      vehicleModel: '',
+      vehicleYear: '',
+      role: initialRole as 'user' | 'provider' || 'user'
+    });
+  }, []);
+
+  useEffect(() => {
     if (initialRole) {
       setValue('role', initialRole as 'user' | 'provider');
     }
   }, [initialRole]);
 
-  // Update URL when role changes in the form
   useEffect(() => {
     if (formRole) {
       router.setParams({ role: formRole });
     }
   }, [formRole]);
-
-  useEffect(() => {
-    fetchServices();
-  }, []);
 
   const onSubmit = async (data: RegistrationForm) => {
     try {
@@ -109,366 +126,288 @@ export default function Register() {
       });
 
       const response = await registerService.register();
-
       router.replace('/login');
     } catch (error: any) {
       console.error(error.response.data);
     }
   };
 
-  const validateStep = async (currentStep: number) => {
-    let isValid = false;
-    
-    switch (currentStep) {
-      case 1:
-        isValid = await trigger(['name', 'email', 'phone', 'role']);
-        break;
-      case 2:
-        isValid = await trigger(['password']);
-        break;
-      case 3:
-        if (formRole === 'provider') {
-          // For providers, validate vehicle info and at least one service
-          isValid = await trigger(['vehicleType', 'vehicleModel', 'vehicleYear']) && selectedServices.length > 0;
-        } else {
-          // For users, only validate vehicle info
-          isValid = await trigger(['vehicleType', 'vehicleModel', 'vehicleYear']);
-        }
-        break;
-    }
-
-    if (!isValid) {
-      Alert.alert(
-        'خطأ في التحقق',
-        'يرجى التحقق من جميع الحقول المطلوبة قبل المتابعة'
-      );
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleNext = async () => {
-    const isValid = await validateStep(step);
-    if (isValid) {
-      setStep(step + 1);
-    }
-  };
-
-  const renderStep = () => {
-    switch (step) {
-      case 1:
-        return (
-          <>
-            <Controller
-              control={control}
-              name="role"
-              rules={{ required: 'نوع الحساب مطلوب' }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <RadioButton.Group
-                  onValueChange={(newValue) => {
-                    onChange(newValue);
-                    // Clear selected services when switching to user role
-                    if (newValue === 'user') {
-                      setSelectedServices([]);
-                      setServicePrices({});
-                    }
-                  }}
-                  value={value}
-                >
-                  <RadioButton.Item label={translations.fields.role.user} value="user" />
-                  <RadioButton.Item label={translations.fields.role.provider} value="provider" />
-                </RadioButton.Group>
-              )}
+  const renderFormFields = () => {
+    return (
+      <>
+        <Controller
+          control={control}
+          name="name"
+          rules={{ required: 'الاسم مطلوب' }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <TextInput
+              label={translations.fields.name}
+              value={value || ''}
+              onChangeText={onChange}
+              error={!!error}
+              style={styles.input}
+              textAlign="right"
             />
-            {errors.role && <Text style={styles.errorText}>{errors.role.message}</Text>}
-            
-            <Controller
-              control={control}
-              name="name"
-              rules={{ required: 'الاسم مطلوب' }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <TextInput
-                  label={translations.fields.name}
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!error}
-                  style={styles.input}
-                  textAlign="right"
-                />
-              )}
+          )}
+        />
+        {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
+        
+        <Controller
+          control={control}
+          name="email"
+          rules={{ 
+            required: 'البريد الإلكتروني مطلوب',
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: 'البريد الإلكتروني غير صالح'
+            }
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <TextInput
+              label={translations.fields.email}
+              value={value || ''}
+              onChangeText={onChange}
+              error={!!error}
+              style={styles.input}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              textAlign="right"
             />
-            {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
-            
-            <Controller
-              control={control}
-              name="email"
-              rules={{ 
-                required: 'البريد الإلكتروني مطلوب',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'البريد الإلكتروني غير صالح'
+          )}
+        />
+        {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+        
+        <Controller
+          control={control}
+          name="phone"
+          rules={{ 
+            required: 'رقم الهاتف مطلوب',
+            minLength: {
+              value: 10,
+              message: 'رقم الهاتف يجب أن يكون 10 أرقام على الأقل'
+            }
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <TextInput
+              label={translations.fields.phone}
+              value={value || ''}
+              onChangeText={onChange}
+              error={!!error}
+              style={styles.input}
+              keyboardType="phone-pad"
+              textAlign="right"
+            />
+          )}
+        />
+        {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
+        
+        <Controller
+          control={control}
+          name="password"
+          rules={{ 
+            required: 'كلمة المرور مطلوبة',
+            minLength: {
+              value: 6,
+              message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
+            }
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <TextInput
+              label={translations.fields.password}
+              value={value || ''}
+              onChangeText={onChange}
+              error={!!error}
+              secureTextEntry
+              style={styles.input}
+              textAlign="right"
+            />
+          )}
+        />
+        {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+        
+        <Controller
+          control={control}
+          name="role"
+          rules={{ required: 'نوع الحساب مطلوب' }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <RadioButton.Group
+              onValueChange={(newValue) => {
+                onChange(newValue);
+                if (newValue === 'user') {
+                  setSelectedServices([]);
+                  setServicePrices({});
                 }
               }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <TextInput
-                  label={translations.fields.email}
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!error}
-                  style={styles.input}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  textAlign="right"
-                />
-              )}
+              value={value || 'user'}
+            >
+              <RadioButton.Item label={translations.fields.role.user} value="user" />
+              <RadioButton.Item label={translations.fields.role.provider} value="provider" />
+            </RadioButton.Group>
+          )}
+        />
+        {errors.role && <Text style={styles.errorText}>{errors.role.message}</Text>}
+
+        <Controller
+          control={control}
+          name="vehicleType"
+          rules={{ required: 'نوع المركبة مطلوب' }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <TextInput
+              label={translations.fields.vehicleType}
+              value={value || ''}
+              onChangeText={onChange}
+              error={!!error}
+              style={styles.input}
+              textAlign="right"
             />
-            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-            
-            <Controller
-              control={control}
-              name="phone"
-              rules={{ 
-                required: 'رقم الهاتف مطلوب',
-                minLength: {
-                  value: 10,
-                  message: 'رقم الهاتف يجب أن يكون 10 أرقام على الأقل'
-                }
-              }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <TextInput
-                  label={translations.fields.phone}
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!error}
-                  style={styles.input}
-                  keyboardType="phone-pad"
-                  textAlign="right"
-                />
-              )}
+          )}
+        />
+        {errors.vehicleType && <Text style={styles.errorText}>{errors.vehicleType.message}</Text>}
+        
+        <Controller
+          control={control}
+          name="vehicleModel"
+          rules={{ required: 'موديل المركبة مطلوب' }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <TextInput
+              label={translations.fields.vehicleModel}
+              value={value || ''}
+              onChangeText={onChange}
+              error={!!error}
+              style={styles.input}
+              textAlign="right"
             />
-            {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
-          </>
-        );
-      case 2:
-        return (
-          <>
-            <Controller
-              control={control}
-              name="password"
-              rules={{ 
-                required: 'كلمة المرور مطلوبة',
-                minLength: {
-                  value: 6,
-                  message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
-                }
-              }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <TextInput
-                  label={translations.fields.password}
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!error}
-                  secureTextEntry
-                  style={styles.input}
-                  textAlign="right"
-                />
-              )}
+          )}
+        />
+        {errors.vehicleModel && <Text style={styles.errorText}>{errors.vehicleModel.message}</Text>}
+        
+        <Controller
+          control={control}
+          name="vehicleYear"
+          rules={{ 
+            required: 'سنة المركبة مطلوبة',
+            pattern: {
+              value: /^\d{4}$/,
+              message: 'سنة المركبة يجب أن تكون 4 أرقام'
+            }
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
+            <TextInput
+              label={translations.fields.vehicleYear}
+              value={value || ''}
+              onChangeText={onChange}
+              error={!!error}
+              style={styles.input}
+              keyboardType="numeric"
+              textAlign="right"
             />
-            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
-          </>
-        );
-      case 3:
-        return (
-          <>
-            <Controller
-              control={control}
-              name="vehicleType"
-              rules={{ required: 'نوع المركبة مطلوب' }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <TextInput
-                  label={translations.fields.vehicleType}
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!error}
-                  style={styles.input}
-                  textAlign="right"
-                />
-              )}
-            />
-            {errors.vehicleType && <Text style={styles.errorText}>{errors.vehicleType.message}</Text>}
-            
-            <Controller
-              control={control}
-              name="vehicleModel"
-              rules={{ required: 'موديل المركبة مطلوب' }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <TextInput
-                  label={translations.fields.vehicleModel}
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!error}
-                  style={styles.input}
-                  textAlign="right"
-                />
-              )}
-            />
-            {errors.vehicleModel && <Text style={styles.errorText}>{errors.vehicleModel.message}</Text>}
-            
-            <Controller
-              control={control}
-              name="vehicleYear"
-              rules={{ 
-                required: 'سنة المركبة مطلوبة',
-                pattern: {
-                  value: /^\d{4}$/,
-                  message: 'سنة المركبة يجب أن تكون 4 أرقام'
-                }
-              }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <TextInput
-                  label={translations.fields.vehicleYear}
-                  value={value}
-                  onChangeText={onChange}
-                  error={!!error}
-                  style={styles.input}
-                  keyboardType="numeric"
-                  textAlign="right"
-                />
-              )}
-            />
-            {errors.vehicleYear && <Text style={styles.errorText}>{errors.vehicleYear.message}</Text>}
-            
-            {formRole === 'provider' && (
-              <View style={{ flex: 1 }}>
-                {selectedServices.length === 0 && (
-                  <Text style={styles.errorText}>يجب إضافة خدمة واحدة على الأقل</Text>
-                )}
-                
-                <FlatList
-                  data={services}
-                  keyExtractor={(item) => item.id.toString()}
-                  renderItem={({ item: service }) => {
-                    const isAdded = selectedServices.some(s => s.servic_type_id === service.id);
-                    return (
-                      <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#fff',
-                        borderRadius: 12,
-                        padding: 12,
-                        marginBottom: 8,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.05,
-                        shadowRadius: 2,
-                        elevation: 1
-                      }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{
-                            fontSize: 16,
-                            fontWeight: '600',
-                            color: '#2c3e50',
-                            marginBottom: 4,
-                            textAlign: 'right'
-                          }}>
-                            {service.name}
-                          </Text>
-                          <TextInput
-                            placeholder={translations.service.enterPrice}
-                            value={servicePrices[service.id] || ''}
-                            onChangeText={(text) => setServicePrices(prev => ({ ...prev, [service.id]: text }))}
-                            keyboardType="numeric"
-                            style={{
-                              height: 36,
-                              backgroundColor: '#f7f9fc',
-                              borderRadius: 8,
-                              paddingHorizontal: 8,
-                              fontSize: 14,
-                              textAlign: 'right'
-                            }}
-                          />
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (isAdded) {
-                              setSelectedServices(selectedServices.filter((s) => s.servic_type_id !== service.id));
-                            } else {
-                              const numericPrice = parseFloat(servicePrices[service.id]) || 0;
-                              setSelectedServices([...selectedServices, { servic_type_id: service.id, price: numericPrice }]);
-                            }
-                          }}
-                          style={{
-                            marginLeft: 12,
-                            backgroundColor: isAdded ? '#fee2e2' : '#dcfce7',
-                            padding: 8,
-                            borderRadius: 8,
-                            minWidth: 80,
-                            alignItems: 'center'
-                          }}
-                        >
-                          <Text style={{
-                            color: isAdded ? '#dc2626' : '#16a34a',
-                            fontSize: 14,
-                            fontWeight: '500'
-                          }}>
-                            {isAdded ? translations.service.remove : translations.service.add}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  }}
-                />
-              </View>
+          )}
+        />
+        {errors.vehicleYear && <Text style={styles.errorText}>{errors.vehicleYear.message}</Text>}
+        
+        {formRole === 'provider' && (
+          <View style={{ flex: 1 }}>
+            {selectedServices.length === 0 && (
+              <Text style={styles.errorText}>يجب إضافة خدمة واحدة على الأقل</Text>
             )}
-          </>
-        );
-      default:
-        return null;
-    }
+            {services.map((service) => {
+              const isAdded = selectedServices.some(s => s.servic_type_id === service.id);
+              return (
+                <View key={service.id} style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#fff',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 8,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
+                  elevation: 1
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: '#2c3e50',
+                      marginBottom: 4,
+                      textAlign: 'right'
+                    }}>
+                      {service.name}
+                    </Text>
+                    <TextInput
+                      placeholder={translations.service.enterPrice}
+                      value={servicePrices[service.id] || ''}
+                      onChangeText={(text) => setServicePrices(prev => ({ ...prev, [service.id]: text }))}
+                      keyboardType="numeric"
+                      style={{
+                        height: 36,
+                        backgroundColor: '#f7f9fc',
+                        borderRadius: 8,
+                        paddingHorizontal: 8,
+                        fontSize: 14,
+                        textAlign: 'right'
+                      }}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (isAdded) {
+                        setSelectedServices(selectedServices.filter((s) => s.servic_type_id !== service.id));
+                      } else {
+                        const numericPrice = parseFloat(servicePrices[service.id]) || 0;
+                        setSelectedServices([...selectedServices, { servic_type_id: service.id, price: numericPrice }]);
+                      }
+                    }}
+                    style={{
+                      marginLeft: 12,
+                      backgroundColor: isAdded ? '#fee2e2' : '#dcfce7',
+                      padding: 8,
+                      borderRadius: 8,
+                      minWidth: 80,
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Text style={{
+                      color: isAdded ? '#dc2626' : '#16a34a',
+                      fontSize: 14,
+                      fontWeight: '500'
+                    }}>
+                      {isAdded ? translations.service.remove : translations.service.add}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <Button
+          mode="contained"
+          onPress={handleSubmit(onSubmit)}
+          style={[styles.button, { marginTop: 20 }]}
+        >
+          {translations.steps.register}
+        </Button>
+
+        <Link href="/login" asChild>
+          <Button mode="text">{translations.login}</Button>
+        </Link>
+      </>
+    );
   };
 
   return (
     <SafeAreaView style={[styles.container, { direction: 'rtl' }]}>
       <Text variant="headlineMedium" style={styles.title}>{translations.title}</Text>
-
-      <ProgressBar progress={step / totalSteps} style={styles.progress} />
-
-      {renderStep()}
-
-      <View style={styles.buttonContainer}>
-        {step > 1 && (
-          <Button
-            mode="outlined"
-            onPress={() => setStep(step - 1)}
-            style={styles.button}
-          >
-            {translations.steps.back}
-          </Button>
-        )}
-
-        {step < totalSteps ? (
-          <Button
-            mode="contained"
-            onPress={handleNext}
-            style={styles.button}
-          >
-            {translations.steps.next}
-          </Button>
-        ) : (
-          <Button
-            mode="contained"
-            onPress={handleSubmit(onSubmit)}
-            style={styles.button}
-          >
-            {translations.steps.register}
-          </Button>
-        )}
-      </View>
-
-      <Link href="/login" asChild>
-        <Button mode="text">{translations.login}</Button>
-      </Link>
+      <FlatList
+        data={[1]} // Single item to render the form
+        renderItem={() => renderFormFields()}
+        keyExtractor={() => 'form'}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.formContainer}
+      />
     </SafeAreaView>
   );
 }
@@ -477,27 +416,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: 'center',
   },
   title: {
     textAlign: 'center',
     marginBottom: 20,
   },
-  progress: {
-    marginBottom: 20,
+  formContainer: {
+    paddingBottom: 20,
   },
   input: {
     marginBottom: 10,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    marginBottom: 10,
-  },
   button: {
-    flex: 1,
-    marginHorizontal: 5,
+    marginVertical: 10,
   },
   errorText: {
     color: '#dc2626',
