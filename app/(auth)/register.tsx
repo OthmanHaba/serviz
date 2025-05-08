@@ -61,8 +61,8 @@ type RegistrationForm = z.infer<typeof registrationSchema>;
 export default function Register() {
   const [step, setStep] = useState(1);
   const totalSteps = 3;
-  const { control, handleSubmit, watch, setValue } = useForm<RegistrationForm>();
-  const { role } = useLocalSearchParams();
+  const { control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm<RegistrationForm>();
+  const { role: initialRole } = useLocalSearchParams();
   const { services, fetchServices } = useServiceStore();
   const [selectedServices, setSelectedServices] = useState<{
     servic_type_id: number;
@@ -70,9 +70,22 @@ export default function Register() {
   }[]>([]);
   const [servicePrices, setServicePrices] = useState<{ [key: number]: string }>({});
 
+  // Watch the role value from the form
+  const formRole = watch('role');
+
   useEffect(() => {
-    setValue('role', role as 'user' | 'provider');
-  }, [role]);
+    // Set initial role from URL params
+    if (initialRole) {
+      setValue('role', initialRole as 'user' | 'provider');
+    }
+  }, [initialRole]);
+
+  // Update URL when role changes in the form
+  useEffect(() => {
+    if (formRole) {
+      router.setParams({ role: formRole });
+    }
+  }, [formRole]);
 
   useEffect(() => {
     fetchServices();
@@ -103,6 +116,45 @@ export default function Register() {
     }
   };
 
+  const validateStep = async (currentStep: number) => {
+    let isValid = false;
+    
+    switch (currentStep) {
+      case 1:
+        isValid = await trigger(['name', 'email', 'phone', 'role']);
+        break;
+      case 2:
+        isValid = await trigger(['password']);
+        break;
+      case 3:
+        if (formRole === 'provider') {
+          // For providers, validate vehicle info and at least one service
+          isValid = await trigger(['vehicleType', 'vehicleModel', 'vehicleYear']) && selectedServices.length > 0;
+        } else {
+          // For users, only validate vehicle info
+          isValid = await trigger(['vehicleType', 'vehicleModel', 'vehicleYear']);
+        }
+        break;
+    }
+
+    if (!isValid) {
+      Alert.alert(
+        'خطأ في التحقق',
+        'يرجى التحقق من جميع الحقول المطلوبة قبل المتابعة'
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleNext = async () => {
+    const isValid = await validateStep(step);
+    if (isValid) {
+      setStep(step + 1);
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
@@ -110,8 +162,31 @@ export default function Register() {
           <>
             <Controller
               control={control}
+              name="role"
+              rules={{ required: 'نوع الحساب مطلوب' }}
+              render={({ field: { onChange, value }, fieldState: { error } }) => (
+                <RadioButton.Group
+                  onValueChange={(newValue) => {
+                    onChange(newValue);
+                    // Clear selected services when switching to user role
+                    if (newValue === 'user') {
+                      setSelectedServices([]);
+                      setServicePrices({});
+                    }
+                  }}
+                  value={value}
+                >
+                  <RadioButton.Item label={translations.fields.role.user} value="user" />
+                  <RadioButton.Item label={translations.fields.role.provider} value="provider" />
+                </RadioButton.Group>
+              )}
+            />
+            {errors.role && <Text style={styles.errorText}>{errors.role.message}</Text>}
+            
+            <Controller
+              control={control}
               name="name"
-              rules={{ required: true }}
+              rules={{ required: 'الاسم مطلوب' }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
                   label={translations.fields.name}
@@ -123,10 +198,18 @@ export default function Register() {
                 />
               )}
             />
+            {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
+            
             <Controller
               control={control}
               name="email"
-              rules={{ required: true }}
+              rules={{ 
+                required: 'البريد الإلكتروني مطلوب',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'البريد الإلكتروني غير صالح'
+                }
+              }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
                   label={translations.fields.email}
@@ -140,10 +223,18 @@ export default function Register() {
                 />
               )}
             />
+            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+            
             <Controller
               control={control}
               name="phone"
-              rules={{ required: true }}
+              rules={{ 
+                required: 'رقم الهاتف مطلوب',
+                minLength: {
+                  value: 10,
+                  message: 'رقم الهاتف يجب أن يكون 10 أرقام على الأقل'
+                }
+              }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
                   label={translations.fields.phone}
@@ -156,40 +247,36 @@ export default function Register() {
                 />
               )}
             />
-            <Controller
-              control={control}
-              name="role"
-              rules={{ required: true }}
-              render={({ field: { onChange, value }, fieldState: { error } }) => (
-                <RadioButton.Group
-                  onValueChange={onChange}
-                  value={value}
-                >
-                  <RadioButton.Item label={translations.fields.role.user} value="user" />
-                  <RadioButton.Item label={translations.fields.role.provider} value="provider" />
-                </RadioButton.Group>
-              )}
-            />
+            {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
           </>
         );
       case 2:
         return (
-          <Controller
-            control={control}
-            name="password"
-            rules={{ required: true }}
-            render={({ field: { onChange, value }, fieldState: { error } }) => (
-              <TextInput
-                label={translations.fields.password}
-                value={value}
-                onChangeText={onChange}
-                error={!!error}
-                secureTextEntry
-                style={styles.input}
-                textAlign="right"
-              />
-            )}
-          />
+          <>
+            <Controller
+              control={control}
+              name="password"
+              rules={{ 
+                required: 'كلمة المرور مطلوبة',
+                minLength: {
+                  value: 6,
+                  message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
+                }
+              }}
+              render={({ field: { onChange, value }, fieldState: { error } }) => (
+                <TextInput
+                  label={translations.fields.password}
+                  value={value}
+                  onChangeText={onChange}
+                  error={!!error}
+                  secureTextEntry
+                  style={styles.input}
+                  textAlign="right"
+                />
+              )}
+            />
+            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+          </>
         );
       case 3:
         return (
@@ -197,7 +284,7 @@ export default function Register() {
             <Controller
               control={control}
               name="vehicleType"
-              rules={{ required: true }}
+              rules={{ required: 'نوع المركبة مطلوب' }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
                   label={translations.fields.vehicleType}
@@ -209,10 +296,12 @@ export default function Register() {
                 />
               )}
             />
+            {errors.vehicleType && <Text style={styles.errorText}>{errors.vehicleType.message}</Text>}
+            
             <Controller
               control={control}
               name="vehicleModel"
-              rules={{ required: true }}
+              rules={{ required: 'موديل المركبة مطلوب' }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
                   label={translations.fields.vehicleModel}
@@ -224,10 +313,18 @@ export default function Register() {
                 />
               )}
             />
+            {errors.vehicleModel && <Text style={styles.errorText}>{errors.vehicleModel.message}</Text>}
+            
             <Controller
               control={control}
               name="vehicleYear"
-              rules={{ required: true }}
+              rules={{ 
+                required: 'سنة المركبة مطلوبة',
+                pattern: {
+                  value: /^\d{4}$/,
+                  message: 'سنة المركبة يجب أن تكون 4 أرقام'
+                }
+              }}
               render={({ field: { onChange, value }, fieldState: { error } }) => (
                 <TextInput
                   label={translations.fields.vehicleYear}
@@ -240,8 +337,14 @@ export default function Register() {
                 />
               )}
             />
-            {role === 'provider' && (
+            {errors.vehicleYear && <Text style={styles.errorText}>{errors.vehicleYear.message}</Text>}
+            
+            {formRole === 'provider' && (
               <View style={{ flex: 1 }}>
+                {selectedServices.length === 0 && (
+                  <Text style={styles.errorText}>يجب إضافة خدمة واحدة على الأقل</Text>
+                )}
+                
                 <FlatList
                   data={services}
                   keyExtractor={(item) => item.id.toString()}
@@ -347,7 +450,7 @@ export default function Register() {
         {step < totalSteps ? (
           <Button
             mode="contained"
-            onPress={() => setStep(step + 1)}
+            onPress={handleNext}
             style={styles.button}
           >
             {translations.steps.next}
@@ -395,5 +498,11 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     marginHorizontal: 5,
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 12,
+    marginBottom: 8,
+    textAlign: 'right',
   },
 }); 
